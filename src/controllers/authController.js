@@ -8,8 +8,7 @@ const { sendVerificationEmail } = require("../config/mailer");
 const registerUser = async (req, res) => {
     let { username, email, password, role_id, company_id } = req.body;
     const adminId = req.user?.userId || null; // Extract admin ID if present (null for self-registration)
-
-    console.log(req.user)
+    
     // Validate request
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

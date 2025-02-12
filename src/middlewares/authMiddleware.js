@@ -15,6 +15,7 @@ const authMiddleware = (req, res, next) => {
       process.env.JWT_SECRET
     );
     req.user = decoded; // Attach user data to request object
+    console.log('authMid', req.user)
     next();
   } catch (error) {
     return res
