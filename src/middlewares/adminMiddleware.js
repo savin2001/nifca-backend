@@ -6,7 +6,7 @@ const adminMiddleware = async (req, res, next) => {
             return res.status(403).json({ error: "Unauthorized. User not found in request." });
         }
 
-        console.log("Admin Middleware Check:", req.user); // Debugging
+        // console.log("Admin Middleware Check:", req.user); // Debugging
 
         const userId = req.user.userId; // Ensure token payload contains 'userId'
 
