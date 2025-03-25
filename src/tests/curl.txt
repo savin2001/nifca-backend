@@ -1,0 +1,74 @@
+# Log in
+curl -X POST http://localhost:3000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{
+           "email": "osukasavin2001@gmail.com",
+           "password": "securepass1"
+         }'
+
+# Registration for client
+curl -X POST http://localhost:3000/api/auth/register/client     -H "Content-Type: application/json"     -d '{            "username":"testuser4",            "email":"allenpane399@gmail.com",            "password":"securepass",            "role_id":7,             "company_id":1        }'
+
+#  Admin registration
+curl -X POST http://localhost:3000/api/auth/register \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM3NzIxOSwiZXhwIjoxNzM5MzgwODE5fQ.4BqqmPhicVBmHyiyXb2Wz2td7_j8Y2KvelAGbah_ejY" \
+     -d '{
+           "username": "testuser4",
+           "email": "allenpane399@gmail.com",
+           "password": "securepass",
+           "role_id": 2,
+           "company_id": 1
+         }'
+
+
+# Changing password
+curl -X POST http://localhost:3000/api/auth/change-password \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM3NjAxNSwiZXhwIjoxNzM5Mzc5NjE1fQ.fRtqovMa0goyYal3iBeaOBmtQegL4_cJBuG3fZyAqRM" \
+     -d '{
+           "oldPassword": "securepass",
+           "newPassword": "securepass1"
+         }'
+
+# Fetch all users
+curl -X GET http://localhost:3000/api/users \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+
+# Fetch single user
+curl -X GET http://localhost:3000/api/users/15 \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+
+
+# Modify user
+curl -X PUT http://localhost:3000/api/users/24 \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+     -d '{
+           "username": "testuser4",
+           "email": "allenpane399@gmail.com",
+           "role_id": 7,
+           "company_id": 1
+         }'
+
+# Enable user
+curl -X PATCH http://localhost:3000/api/users/24/enable \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+
+# Disable user
+curl -X PATCH http://localhost:3000/api/users/24/disable \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+
+# Password reset
+curl -X PATCH http://localhost:3000/api/users/24/reset-password \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+     -d '{
+           "newPassword": "newSecurePassword123"
+         }'
+
+# Delete user
+curl -X DELETE http://localhost:3000/api/users/24 \
+     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTczOTM4MjA2NCwiZXhwIjoxNzM5Mzg1NjY0fQ.SN-zaXw1GhYPn4um6zlerwoHriU7y2B98eHyfqYZjkU" \
+
+
