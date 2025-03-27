@@ -4,25 +4,29 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
 class ClientModel {
-  // Find client by email
   async findByEmail(email) {
     const [clients] = await db.query("SELECT * FROM clients WHERE email = ?", [email]);
     return clients[0];
   }
 
-  // Find client by ID
   async findById(id) {
     const [clients] = await db.query("SELECT * FROM clients WHERE id = ?", [id]);
     return clients[0];
   }
 
-  // Find client by verification token
   async findByVerificationToken(token) {
     const [clients] = await db.query("SELECT * FROM clients WHERE verification_token = ?", [token]);
     return clients[0];
   }
 
-  // Create a new client
+  async findByResetToken(token) {
+    const [clients] = await db.query(
+      "SELECT * FROM clients WHERE reset_token = ? AND reset_token_expires_at > NOW()",
+      [token]
+    );
+    return clients[0];
+  }
+
   async create({ username, email, password, company_id }) {
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -45,7 +49,6 @@ class ClientModel {
     return { id: result.insertId, email, verificationToken };
   }
 
-  // Update client details
   async update(id, { username, email, company_id }) {
     await db.query(
       `UPDATE clients 
@@ -56,28 +59,24 @@ class ClientModel {
     return this.findById(id);
   }
 
-  // Soft delete client
   async softDelete(id) {
     await db.query("UPDATE clients SET status = 'inactive' WHERE id = ?", [id]);
   }
 
-  // Enable/disable client
   async setEnabled(id, enabled) {
     await db.query("UPDATE clients SET enabled = ? WHERE id = ?", [enabled, id]);
   }
 
-  // Update password
   async updatePassword(id, newPassword) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.query(
       `UPDATE clients 
-       SET password_hash = ?, enabled = TRUE, status = 'active' 
+       SET password_hash = ?, enabled = TRUE, status = 'active', reset_token = NULL, reset_token_expires_at = NULL 
        WHERE id = ?`,
       [hashedPassword, id]
     );
   }
 
-  // Verify email
   async verifyEmail(clientId) {
     await db.query(
       `UPDATE clients 
@@ -87,7 +86,15 @@ class ClientModel {
     );
   }
 
-  // Update failed attempts
+  async activateAccount(clientId) {
+    await db.query(
+      `UPDATE clients 
+       SET enabled = TRUE, status = 'active' 
+       WHERE id = ?`,
+      [clientId]
+    );
+  }
+
   async incrementFailedAttempts(id) {
     await db.query(
       `UPDATE clients 
@@ -97,12 +104,10 @@ class ClientModel {
     );
   }
 
-  // Reset failed attempts
   async resetFailedAttempts(id) {
     await db.query("UPDATE clients SET failed_attempts = 0 WHERE id = ?", [id]);
   }
 
-  // Update last login
   async updateLastLogin(id) {
     await db.query(
       `UPDATE clients 
@@ -112,10 +117,21 @@ class ClientModel {
     );
   }
 
-  // Validate company exists
   async validateCompany(company_id) {
     const [companies] = await db.query("SELECT id FROM companies WHERE id = ?", [company_id]);
     return companies[0];
+  }
+
+  async generateResetToken(clientId) {
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 3600 * 1000); // Token expires in 1 hour
+    await db.query(
+      `UPDATE clients 
+       SET reset_token = ?, reset_token_expires_at = ? 
+       WHERE id = ?`,
+      [resetToken, expiresAt, clientId]
+    );
+    return resetToken;
   }
 }
 

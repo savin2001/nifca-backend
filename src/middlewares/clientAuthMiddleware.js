@@ -1,7 +1,7 @@
-// src/middleware/clientSessionMiddleware.js
+// src/middlewares/clientAuthMiddleware.js
 const clientModel = require("../models/clientModel");
 
-const clientSessionMiddleware = async (req, res, next) => {
+const clientAuthMiddleware = async (req, res, next) => {
   if (req.session && req.session.user) {
     // Verify that the client still exists and is active
     const client = await clientModel.findById(req.session.user.userId);
@@ -15,6 +15,14 @@ const clientSessionMiddleware = async (req, res, next) => {
       return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
     }
 
+    if (!client.enabled) {
+      req.session.destroy();
+      return res.status(403).json({
+        error: "Please activate your account before proceeding",
+        redirect: "/activate-account",
+      });
+    }
+
     req.user = {
       ...req.session.user,
       isClient: true,
@@ -25,4 +33,4 @@ const clientSessionMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = clientSessionMiddleware;
+module.exports = clientAuthMiddleware;
