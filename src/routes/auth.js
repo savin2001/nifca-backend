@@ -1,27 +1,20 @@
+// src/routes/auth.js
 const express = require("express");
 const { check } = require("express-validator");
-const {
-  registerUser,
-  loginUser,
-  verifyEmail,
-  changePassword,
-} = require("../controllers/authController");
-const authMiddleware = require("../middlewares/authMiddleware"); // Ensure JWT is checked
+const authController = require("../controllers/authController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// Register route
 router.post(
   "/register/client",
   [
     check("username").notEmpty().withMessage("Username is required"),
     check("email").isEmail().withMessage("Valid email is required"),
-    check("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters long"),
+    check("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
     check("role_id").isInt().withMessage("Role ID must be a number"),
   ],
-  registerUser
+  authController.registerUser
 );
 
 router.post(
@@ -30,21 +23,14 @@ router.post(
   [
     check("username").notEmpty().withMessage("Username is required"),
     check("email").isEmail().withMessage("Valid email is required"),
-    check("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters long"),
+    check("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
     check("role_id").isInt().withMessage("Role ID must be a number"),
   ],
-  registerUser
+  authController.registerUser
 );
 
-// Login route
-router.post("/login", loginUser);
-
-// Email verification route
-router.get("/verify", verifyEmail);
-
-// ✅ Change password route (requires authentication)
-router.post("/change-password", authMiddleware, changePassword);
+router.post("/login", authController.loginUser);
+router.get("/verify", authController.verifyEmail);
+router.post("/change-password", authMiddleware, authController.changePassword);
 
 module.exports = router;
