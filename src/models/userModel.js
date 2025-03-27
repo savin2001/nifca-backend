@@ -27,22 +27,42 @@ class UserModel {
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const [result] = await db.query(
-      "INSERT INTO users (username, email, password_hash, role_id, company_id, verification_token, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [username, email, passwordHash, role_id, company_id, verificationToken, "inactive", created_by]
+      `INSERT INTO users (
+        username, email, password_hash, role_id, company_id, 
+        verification_token, status, created_by, enabled, failed_attempts
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        username,
+        email,
+        passwordHash,
+        role_id,
+        company_id,
+        verificationToken,
+        "inactive",
+        created_by,
+        0, // enabled
+        0, // failed_attempts
+      ]
     );
     return { id: result.insertId, email, verificationToken };
   }
 
   // Get all users
   async getAll() {
-    const [users] = await db.query("SELECT id, username, email, role_id, status, enabled FROM users");
+    const [users] = await db.query(
+      `SELECT id, username, email, role_id, status, enabled, 
+              failed_attempts, last_login, company_id, created_by 
+       FROM users`
+    );
     return users;
   }
 
   // Update user details
   async update(id, { username, email, role_id, company_id }) {
     await db.query(
-      "UPDATE users SET username = ?, email = ?, role_id = ?, company_id = ? WHERE id = ?",
+      `UPDATE users 
+       SET username = ?, email = ?, role_id = ?, company_id = ? 
+       WHERE id = ?`,
       [username, email, role_id, company_id, id]
     );
     return this.findById(id);
@@ -61,10 +81,12 @@ class UserModel {
   // Update password
   async updatePassword(id, newPassword) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query("UPDATE users SET password_hash = ?, enabled = TRUE, status = 'active' WHERE id = ?", [
-      hashedPassword,
-      id,
-    ]);
+    await db.query(
+      `UPDATE users 
+       SET password_hash = ?, enabled = TRUE, status = 'active' 
+       WHERE id = ?`,
+      [hashedPassword, id]
+    );
   }
 
   // Update role
@@ -80,8 +102,35 @@ class UserModel {
   // Verify email
   async verifyEmail(userId) {
     await db.query(
-      "UPDATE users SET verified_at = NOW(), verification_token = NULL WHERE id = ?",
+      `UPDATE users 
+       SET verified_at = NOW(), verification_token = NULL 
+       WHERE id = ?`,
       [userId]
+    );
+  }
+
+  // Update failed attempts
+  async incrementFailedAttempts(id) {
+    await db.query(
+      `UPDATE users 
+       SET failed_attempts = failed_attempts + 1 
+       WHERE id = ?`,
+      [id]
+    );
+  }
+
+  // Reset failed attempts
+  async resetFailedAttempts(id) {
+    await db.query("UPDATE users SET failed_attempts = 0 WHERE id = ?", [id]);
+  }
+
+  // Update last login
+  async updateLastLogin(id) {
+    await db.query(
+      `UPDATE users 
+       SET last_login = NOW() 
+       WHERE id = ?`,
+      [id]
     );
   }
 

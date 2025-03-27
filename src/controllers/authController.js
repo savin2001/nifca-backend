@@ -16,13 +16,11 @@ const authController = {
     const adminId = req.user?.userId || null;
 
     try {
-      // Check if email already exists
       const existingUser = await userModel.findByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already in use" });
       }
 
-      // Validate role_id
       const role = await userModel.validateRole(role_id);
       if (!role) {
         return res.status(400).json({ error: "Invalid role ID" });
@@ -30,12 +28,10 @@ const authController = {
 
       const roleName = role.name;
 
-      // Enforce that only "client" can self-register
       if (!adminId && roleName !== "client") {
         return res.status(403).json({ error: "Only clients can self-register. Other roles must be created by an admin." });
       }
 
-      // If the role is NOT "client", default company_id to Nifca (company_id = 1)
       if (roleName !== "client") {
         company_id = 1;
       } else {
@@ -48,7 +44,6 @@ const authController = {
         }
       }
 
-      // Create user
       const newUser = await userModel.create({
         username,
         email,
@@ -58,7 +53,6 @@ const authController = {
         created_by: adminId,
       });
 
-      // Send email verification
       await sendVerificationEmail(email, newUser.verificationToken);
 
       res.status(201).json({ message: "User registered successfully. Verification email sent." });
@@ -86,8 +80,13 @@ const authController = {
 
       const isPasswordValid = await bcrypt.compare(password, user.password_hash);
       if (!isPasswordValid) {
+        await userModel.incrementFailedAttempts(user.id);
         return res.status(401).json({ error: "Invalid email or password" });
       }
+
+      // Reset failed attempts and update last login on successful login
+      await userModel.resetFailedAttempts(user.id);
+      await userModel.updateLastLogin(user.id);
 
       const token = jwt.sign(
         { userId: user.id, role: user.role_id, companyId: user.company_id },

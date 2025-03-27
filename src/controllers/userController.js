@@ -112,7 +112,20 @@ const userController = {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.status(200).json(user);
+      res.status(200).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role_id: user.role_id,
+        status: user.status,
+        enabled: user.enabled,
+        failed_attempts: user.failed_attempts,
+        last_login: user.last_login,
+        company_id: user.company_id,
+        created_by: user.created_by,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while fetching user" });
