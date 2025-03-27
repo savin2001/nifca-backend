@@ -71,7 +71,6 @@ const authController = {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      // Check if the user is soft-deleted
       if (user.status === "inactive") {
         return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
       }
@@ -92,11 +91,18 @@ const authController = {
       await userModel.resetFailedAttempts(user.id);
       await userModel.updateLastLogin(user.id);
 
+      const expiresIn = 3600; // 1 hour in seconds
       const token = jwt.sign(
         { userId: user.id, role: user.role_id, companyId: user.company_id },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn }
       );
+
+      // Calculate expiration time for the token
+      const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+      // Store the token in the user_tokens table
+      await userModel.storeToken(user.id, token, expiresAt);
 
       if (!user.enabled) {
         return res.status(200).json({
@@ -148,10 +154,37 @@ const authController = {
 
       await userModel.updatePassword(userId, newPassword);
 
-      res.status(200).json({ message: "Password changed successfully. You can now proceed." });
+      // Remove all tokens to force re-login
+      await userModel.removeAllTokens(userId);
+
+      res.status(200).json({ message: "Password changed successfully. Please log in again." });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during password change" });
+    }
+  },
+
+  async logoutUser(req, res) {
+    const userId = req.user.userId;
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+
+    try {
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.status === "inactive") {
+        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+      }
+
+      // Remove the specific token from the user_tokens table
+      await userModel.removeToken(userId, token);
+
+      res.status(200).json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error during logout" });
     }
   },
 };

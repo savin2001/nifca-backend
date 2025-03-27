@@ -87,7 +87,9 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
       await userModel.updatePassword(userId, newPassword);
-      res.status(200).json({ message: "Password reset successfully" });
+      // Remove all tokens to force re-login
+      await userModel.removeAllTokens(userId);
+      res.status(200).json({ message: "Password reset successfully. User must log in again." });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while resetting password" });
@@ -157,7 +159,8 @@ const userController = {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      await userModel.forceLogout(userId);
+      // Remove all tokens for the user
+      await userModel.removeAllTokens(userId);
       res.status(200).json({ message: "User forcefully logged out" });
     } catch (error) {
       console.error(error);

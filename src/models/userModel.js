@@ -40,8 +40,8 @@ class UserModel {
         verificationToken,
         "inactive",
         created_by,
-        0, // enabled
-        0, // failed_attempts
+        0,
+        0,
       ]
     );
     return { id: result.insertId, email, verificationToken };
@@ -94,9 +94,41 @@ class UserModel {
     await db.query("UPDATE users SET role_id = ? WHERE id = ?", [role_id, id]);
   }
 
-  // Force logout (invalidate token)
-  async forceLogout(id) {
-    await db.query("UPDATE users SET token = NULL WHERE id = ?", [id]);
+  // Store token in user_tokens table
+  async storeToken(userId, token, expiresAt) {
+    await db.query(
+      `INSERT INTO user_tokens (user_id, token, expires_at) 
+       VALUES (?, ?, ?)`,
+      [userId, token, expiresAt]
+    );
+  }
+
+  // Check if a token is valid
+  async isTokenValid(userId, token) {
+    const [tokens] = await db.query(
+      `SELECT * FROM user_tokens 
+       WHERE user_id = ? AND token = ? AND expires_at > NOW()`,
+      [userId, token]
+    );
+    return tokens.length > 0;
+  }
+
+  // Remove a specific token (logout)
+  async removeToken(userId, token) {
+    await db.query(
+      `DELETE FROM user_tokens 
+       WHERE user_id = ? AND token = ?`,
+      [userId, token]
+    );
+  }
+
+  // Remove all tokens for a user (force logout or password reset)
+  async removeAllTokens(userId) {
+    await db.query(
+      `DELETE FROM user_tokens 
+       WHERE user_id = ?`,
+      [userId]
+    );
   }
 
   // Verify email

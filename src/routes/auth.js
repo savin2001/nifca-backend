@@ -32,5 +32,6 @@ router.post(
 router.post("/login", authController.loginUser);
 router.get("/verify", authController.verifyEmail);
 router.post("/change-password", authMiddleware, authController.changePassword);
+router.post("/logout", authMiddleware, authController.logoutUser);
 
 module.exports = router;
