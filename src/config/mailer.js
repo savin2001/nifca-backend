@@ -1,6 +1,6 @@
 // src/config/mailer.js
 const nodemailer = require("nodemailer");
-const path = require("path"); // Import the path module
+const path = require("path");
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -12,7 +12,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify the transporter configuration on startup
 transporter.verify((error, success) => {
   if (error) {
     console.error("SMTP connection error:", error);
@@ -21,9 +20,11 @@ transporter.verify((error, success) => {
   }
 });
 
-const sendVerificationEmail = async (email, token) => {
-  const verificationLink = `http://localhost:3000/api/client/auth/verify?token=${token}`; // Updated to use client auth route
-  const logoPath = path.join(__dirname, "../assets/nifca.png"); // Path to the logo
+const sendVerificationEmail = async (email, token, userType = "client") => {
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const verificationPath = userType === "admin" ? "/api/auth/verify" : "/api/client/auth/verify";
+  const verificationLink = `${baseUrl}${verificationPath}?token=${token}`;
+  const logoPath = path.join(__dirname, "../assets/nifca.png");
 
   const mailOptions = {
     from: `"NIFCA Support" <${process.env.EMAIL_USER}>`,
@@ -56,7 +57,7 @@ const sendVerificationEmail = async (email, token) => {
       {
         filename: "logo.png",
         path: logoPath,
-        cid: "logo", // Same CID as used in the <img> tag
+        cid: "logo",
       },
     ],
   };
@@ -73,7 +74,7 @@ const sendVerificationEmail = async (email, token) => {
 const sendPasswordResetEmail = async (email, token) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
   const mailOptions = {
-    from: `"NIFCA Support" <${process.env.EMAIL_USER}>`, // Use the same format as sendVerificationEmail
+    from: `"NIFCA Support" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Password Reset Request - NIFCA",
     html: `
@@ -85,7 +86,6 @@ const sendPasswordResetEmail = async (email, token) => {
         <p style="color: #205473; font-size: 16px; text-align: center;">
           You requested a password reset. Click the button below to reset your password:
         </p>
-        
         <div style="text-align: center; margin: 20px 0;">
           <a href="${resetUrl}" 
             style="background-color: #A62D5C; color: #FFFFFF; padding: 12px 18px; text-decoration: none; font-size: 16px; border-radius: 5px; display: inline-block;">

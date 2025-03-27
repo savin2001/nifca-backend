@@ -46,11 +46,11 @@ const authController = {
         email,
         password,
         role_id,
-        company_id: company_id || 1, // Default to Nifca for admin users
+        company_id: company_id || 1, // Default to NIFCA for admin users
         created_by: adminId,
       });
 
-      await sendVerificationEmail(email, newUser.verificationToken);
+      await sendVerificationEmail(email, newUser.verificationToken, "admin");
 
       res.status(201).json({ message: "User registered successfully. Verification email sent." });
     } catch (error) {

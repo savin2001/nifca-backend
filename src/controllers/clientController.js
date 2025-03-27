@@ -2,7 +2,7 @@
 const clientModel = require("../models/clientModel");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
-const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/mailer");
+const { sendVerificationEmail } = require("../config/mailer");
 
 const clientController = {
   async register(req, res) {
@@ -35,7 +35,7 @@ const clientController = {
         company_id,
       });
 
-      await sendVerificationEmail(email, newClient.verificationToken);
+      await sendVerificationEmail(email, newClient.verificationToken, "client");
 
       res.status(201).json({ message: "Client registered successfully. Verification email sent." });
     } catch (error) {
@@ -143,7 +143,7 @@ const clientController = {
       res.status(200).json({ message: "Account activated successfully. You can now log in." });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error during account activation." });
+      res.status(500).json({ error: "Server error during account activation" });
     }
   },
 
@@ -165,12 +165,16 @@ const clientController = {
       }
 
       const resetToken = await clientModel.generateResetToken(client.id);
-      await sendPasswordResetEmail(email, resetToken);
+      try {
+        await sendPasswordResetEmail(email, resetToken);
+      } catch (emailError) {
+        console.error("Email sending failed, but request processed:", emailError);
+      }
 
       res.status(200).json({ message: "If the email exists, a password reset link has been sent." });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error during password reset request." });
+      res.status(500).json({ error: "Server error during password reset request" });
     }
   },
 
@@ -188,7 +192,7 @@ const clientController = {
       res.status(200).json({ message: "Password reset successfully. You can now log in with your new password." });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error during password reset." });
+      res.status(500).json({ error: "Server error during password reset" });
     }
   },
 

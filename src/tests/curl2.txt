@@ -2,8 +2,8 @@
 POST /api/auth/register - Register a new admin user (site admin only).
 curl -X POST http://localhost:3000/api/auth/register \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{siteAdminToken}}" \
--d '{"username":"newadmin","email":"newadmin@nifca.com","password":"adminpass","role_id":2,"company_id":1}'
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMzLCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MjE3MiwiZXhwIjoxNzQzMDg1NzcyfQ.yz2UgHNyN5gvPDAzX1fDFqlcn3sFPT7_fJ5_PYoruDw" \
+-d '{"username":"newadmin","email":"allenpane399@gmail.com","password":"adminpass","role_id":2,"company_id":1}'
 
 
 POST /api/auth/login - Login as an admin user (returns JWT token).
