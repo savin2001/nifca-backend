@@ -1,199 +1,192 @@
-const db = require("../config/db");
-const bcrypt = require("bcryptjs");
+// src/controllers/authController.js
+const userModel = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
-const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const { sendVerificationEmail } = require("../config/mailer");
 
-const registerUser = async (req, res) => {
-    let { username, email, password, role_id, company_id } = req.body;
-    const adminId = req.user?.userId || null; // Extract admin ID if present (null for self-registration)
-    
-    // Validate request
+const authController = {
+  async registerUser(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ errors: errors.array() });
     }
+
+    let { username, email, password, role_id, company_id } = req.body;
+    const adminId = req.user?.userId || null;
 
     try {
-        // Check if email already exists
-        const [existingUser] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
-        if (existingUser.length > 0) {
-            return res.status(400).json({ error: "Email already in use" });
+      const existingUser = await userModel.findByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+
+      const role = await userModel.validateRole(role_id);
+      if (!role) {
+        return res.status(400).json({ error: "Invalid role ID" });
+      }
+
+      const roleName = role.name;
+
+      if (!adminId && roleName !== "client") {
+        return res.status(403).json({ error: "Only clients can self-register. Other roles must be created by an admin." });
+      }
+
+      if (roleName !== "client") {
+        company_id = 1;
+      } else {
+        if (!company_id) {
+          return res.status(400).json({ error: "Client users must provide a company_id" });
         }
-
-        // Validate role_id exists
-        const [roleRows] = await db.query("SELECT name FROM roles WHERE id = ?", [role_id]);
-        if (roleRows.length === 0) {
-            return res.status(400).json({ error: "Invalid role ID" });
+        const company = await userModel.validateCompany(company_id);
+        if (!company) {
+          return res.status(400).json({ error: "Invalid company ID" });
         }
+      }
 
-        const roleName = roleRows[0].name;
+      const newUser = await userModel.create({
+        username,
+        email,
+        password,
+        role_id,
+        company_id,
+        created_by: adminId,
+      });
 
-        // ✅ Enforce that only "client" can self-register
-        if (!adminId && roleName !== "client") {
-            return res.status(403).json({ error: "Only clients can self-register. Other roles must be created by an admin." });
-        }
+      await sendVerificationEmail(email, newUser.verificationToken);
 
-        // If the role is NOT "client", default company_id to Nifca (company_id = 1)
-        if (roleName !== "client") {
-            company_id = 1;
-        } else {
-            // Ensure company_id exists for client users
-            if (!company_id) {
-                return res.status(400).json({ error: "Client users must provide a company_id" });
-            }
-
-            const [companyRows] = await db.query("SELECT id FROM companies WHERE id = ?", [company_id]);
-            if (companyRows.length === 0) {
-                return res.status(400).json({ error: "Invalid company ID" });
-            }
-        }
-
-        // Hash password
-        const passwordHash = await bcrypt.hash(password, 10);
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-
-        // Insert user into the database (store admin ID if applicable)
-        await db.query(
-            "INSERT INTO users (username, email, password_hash, role_id, company_id, verification_token, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [username, email, passwordHash, role_id, company_id, verificationToken, 'inactive', adminId]
-        );
-
-        // Send email verification
-        await sendVerificationEmail(email, verificationToken);
-
-        res.status(201).json({ message: "User registered successfully. Verification email sent." });
+      res.status(201).json({ message: "User registered successfully. Verification email sent." });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Server error during registration" });
+      console.error(error);
+      res.status(500).json({ error: "Server error during registration" });
     }
+  },
+
+  async loginUser(req, res) {
+    const { email, password } = req.body;
+
+    try {
+      const user = await userModel.findByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      if (user.status === "inactive") {
+        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+      }
+
+      if (!user.verified_at) {
+        return res.status(403).json({
+          error: "Please verify your email before logging in",
+          redirect: "/verify-email",
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      if (!isPasswordValid) {
+        await userModel.incrementFailedAttempts(user.id);
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      await userModel.resetFailedAttempts(user.id);
+      await userModel.updateLastLogin(user.id);
+
+      const expiresIn = 3600; // 1 hour in seconds
+      const token = jwt.sign(
+        { userId: user.id, role: user.role_id, companyId: user.company_id },
+        process.env.JWT_SECRET,
+        { expiresIn }
+      );
+
+      // Calculate expiration time for the token
+      const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+      // Store the token in the user_tokens table
+      await userModel.storeToken(user.id, token, expiresAt);
+
+      if (!user.enabled) {
+        return res.status(200).json({
+          token,
+          message: "Please change your password before proceeding",
+          forcePasswordChange: true,
+        });
+      }
+
+      res.status(200).json({ token, message: "Login successful" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error during login" });
+    }
+  },
+
+  async verifyEmail(req, res) {
+    const { token } = req.query;
+
+    try {
+      const user = await userModel.findByVerificationToken(token);
+      if (!user) {
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
+
+      await userModel.verifyEmail(user.id);
+
+      res.status(200).json({ message: "Email verified successfully. You can now log in." });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error during verification" });
+    }
+  },
+
+  async changePassword(req, res) {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.userId;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Old password is incorrect" });
+      }
+
+      await userModel.updatePassword(userId, newPassword);
+
+      // Remove all tokens to force re-login
+      await userModel.removeAllTokens(userId);
+
+      res.status(200).json({ message: "Password changed successfully. Please log in again." });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error during password change" });
+    }
+  },
+
+  async logoutUser(req, res) {
+    const userId = req.user.userId;
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+
+    try {
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.status === "inactive") {
+        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+      }
+
+      // Remove the specific token from the user_tokens table
+      await userModel.removeToken(userId, token);
+
+      res.status(200).json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error during logout" });
+    }
+  },
 };
 
-
-const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
-    if (users.length === 0) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    const user = users[0];
-
-    // Redirect unverified users to verify email
-    if (!user.verified_at) {
-      return res.status(403).json({
-        error: "Please verify your email before logging in",
-        redirect: "/verify-email",
-      });
-    }
-
-    // Check password validity
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    // Generate JWT token before checking password change requirement
-    const token = jwt.sign(
-      { userId: user.id, role: user.role_id, companyId: user.company_id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    // If the user hasn't changed their password, force them to do so
-    if (!user.enabled) {
-      return res.status(200).json({
-        token,
-        message: "Please change your password before proceeding",
-        forcePasswordChange: true,
-      });
-    }
-
-    res.status(200).json({ token, message: "Login successful" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error during login" });
-  }
-};
-
-const verifyEmail = async (req, res) => {
-  const { token } = req.query;
-
-  try {
-    // Find user by token
-    const [users] = await db.query(
-      "SELECT id FROM users WHERE verification_token = ?",
-      [token]
-    );
-
-    if (users.length === 0) {
-      return res.status(400).json({ error: "Invalid or expired token" });
-    }
-
-    const user = users[0];
-
-    // Update user to mark email as verified
-    await db.query(
-      "UPDATE users SET verified_at = NOW(), verification_token = NULL WHERE id = ?",
-      [user.id]
-    );
-
-    res
-      .status(200)
-      .json({ message: "Email verified successfully. You can now log in." });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error during verification" });
-  }
-};
-
-// ✅ Change Password Function
-const changePassword = async (req, res) => {
-  const { oldPassword, newPassword } = req.body;
-  const userId = req.user.userId; // Extracted from JWT token
-
-  try {
-    // Get user details
-    const [users] = await db.query(
-      "SELECT password_hash FROM users WHERE id = ?",
-      [userId]
-    );
-    if (users.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const user = users[0];
-
-    // Validate old password
-    const isPasswordValid = await bcrypt.compare(
-      oldPassword,
-      user.password_hash
-    );
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Old password is incorrect" });
-    }
-
-    // Hash new password
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    // Update password and mark user as enabled (status = 'active')
-    await db.query(
-      "UPDATE users SET password_hash = ?, enabled = TRUE, status = 'active' WHERE id = ?",
-      [newPasswordHash, userId]
-    );
-
-    res
-      .status(200)
-      .json({ message: "Password changed successfully. You can now proceed." });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error during password change" });
-  }
-};
-
-module.exports = { registerUser, loginUser, verifyEmail, changePassword };
+module.exports = authController;
