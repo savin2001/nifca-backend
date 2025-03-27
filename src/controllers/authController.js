@@ -71,6 +71,11 @@ const authController = {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Check if the user is soft-deleted
+      if (user.status === "inactive") {
+        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+      }
+
       if (!user.verified_at) {
         return res.status(403).json({
           error: "Please verify your email before logging in",
@@ -84,7 +89,6 @@ const authController = {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      // Reset failed attempts and update last login on successful login
       await userModel.resetFailedAttempts(user.id);
       await userModel.updateLastLogin(user.id);
 
