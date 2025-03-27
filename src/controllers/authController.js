@@ -12,7 +12,7 @@ const authController = {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    let { username, email, password, role_id, company_id } = req.body;
+    const { username, email, password, role_id, company_id } = req.body;
     const adminId = req.user?.userId || null;
 
     try {
@@ -28,20 +28,17 @@ const authController = {
 
       const roleName = role.name;
 
-      if (!adminId && roleName !== "client") {
-        return res.status(403).json({ error: "Only clients can self-register. Other roles must be created by an admin." });
+      if (!adminId) {
+        return res.status(403).json({ error: "Only site admins can create users." });
       }
 
-      if (roleName !== "client") {
-        company_id = 1;
-      } else {
-        if (!company_id) {
-          return res.status(400).json({ error: "Client users must provide a company_id" });
-        }
-        const company = await userModel.validateCompany(company_id);
-        if (!company) {
-          return res.status(400).json({ error: "Invalid company ID" });
-        }
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can create other users." });
+      }
+
+      if (roleName === "client") {
+        return res.status(403).json({ error: "Clients cannot be registered through this endpoint. Use the client registration endpoint." });
       }
 
       const newUser = await userModel.create({
@@ -49,7 +46,7 @@ const authController = {
         email,
         password,
         role_id,
-        company_id,
+        company_id: company_id || 1, // Default to Nifca for admin users
         created_by: adminId,
       });
 
@@ -98,10 +95,7 @@ const authController = {
         { expiresIn }
       );
 
-      // Calculate expiration time for the token
       const expiresAt = new Date(Date.now() + expiresIn * 1000);
-
-      // Store the token in the user_tokens table
       await userModel.storeToken(user.id, token, expiresAt);
 
       if (!user.enabled) {
@@ -112,7 +106,7 @@ const authController = {
         });
       }
 
-      res.status(200).json({ token, message: "Login successful" });
+      return res.status(200).json({ token, message: "Login successful" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during login" });
@@ -153,8 +147,6 @@ const authController = {
       }
 
       await userModel.updatePassword(userId, newPassword);
-
-      // Remove all tokens to force re-login
       await userModel.removeAllTokens(userId);
 
       res.status(200).json({ message: "Password changed successfully. Please log in again." });
@@ -166,7 +158,6 @@ const authController = {
 
   async logoutUser(req, res) {
     const userId = req.user.userId;
-    const token = req.header("Authorization")?.replace("Bearer ", "");
 
     try {
       const user = await userModel.findById(userId);
@@ -178,7 +169,7 @@ const authController = {
         return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
       }
 
-      // Remove the specific token from the user_tokens table
+      const token = req.header("Authorization")?.replace("Bearer ", "");
       await userModel.removeToken(userId, token);
 
       res.status(200).json({ message: "Logged out successfully" });
