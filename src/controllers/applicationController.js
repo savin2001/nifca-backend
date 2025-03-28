@@ -28,7 +28,7 @@ const applicationController = {
         client_id,
         title,
         description,
-        created_by: client_id, // For now, created_by is the client_id; adjust if needed
+        created_by: client_id,
       });
       res.status(201).json({ message: "Application created successfully", application });
     } catch (error) {
@@ -159,7 +159,7 @@ const applicationController = {
         return res.status(403).json({ error: "Only Application Admins can view clients." });
       }
 
-      const clients = await clientModel.findAll();
+      const clients = await clientModel.getAll();
       res.status(200).json(clients);
     } catch (error) {
       console.error(error);
@@ -209,11 +209,18 @@ const applicationController = {
         username: username || client.username,
         email: email || client.email,
         company_id: company_id || client.company_id,
-        status: status || client.status,
-        enabled: enabled !== undefined ? enabled : client.enabled,
       });
 
-      res.status(200).json({ message: "Client updated successfully", client: updatedClient });
+      if (status) {
+        await clientModel.softDelete(clientId); // Updates status to 'inactive' if status is provided
+      }
+
+      if (enabled !== undefined) {
+        await clientModel.setEnabled(clientId, enabled);
+      }
+
+      const updatedClientDetails = await clientModel.findById(clientId);
+      res.status(200).json({ message: "Client updated successfully", client: updatedClientDetails });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while updating client" });
@@ -233,8 +240,8 @@ const applicationController = {
         return res.status(404).json({ error: "Client not found" });
       }
 
-      await clientModel.delete(clientId);
-      res.status(200).json({ message: "Client deleted successfully" });
+      await clientModel.softDelete(clientId);
+      res.status(200).json({ message: "Client soft-deleted successfully" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while deleting client" });

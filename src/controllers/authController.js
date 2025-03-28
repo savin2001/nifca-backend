@@ -68,8 +68,10 @@ const authController = {
         return res.status(403).json({ error: "Only site admins can view all users." });
       }
 
-      const users = await userModel.findAll();
-      res.status(200).json(users);
+      const users = await userModel.getAll();
+      // Filter out clients (role_id: 7)
+      const filteredUsers = users.filter(user => user.role_id !== 7);
+      res.status(200).json(filteredUsers);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while fetching users" });
@@ -89,6 +91,10 @@ const authController = {
       const user = await userModel.findById(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be viewed through this endpoint. Use the client management endpoint." });
       }
 
       res.status(200).json(user);
@@ -123,11 +129,18 @@ const authController = {
         email: email || user.email,
         role_id: role_id || user.role_id,
         company_id: company_id || user.company_id,
-        status: status || user.status,
-        enabled: enabled !== undefined ? enabled : user.enabled,
       });
 
-      res.status(200).json({ message: "User updated successfully", user: updatedUser });
+      if (status) {
+        await userModel.softDelete(userId); // Updates status to 'inactive' if status is provided
+      }
+
+      if (enabled !== undefined) {
+        await userModel.setEnabled(userId, enabled);
+      }
+
+      const updatedUserDetails = await userModel.findById(userId);
+      res.status(200).json({ message: "User updated successfully", user: updatedUserDetails });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while updating user" });
@@ -153,8 +166,8 @@ const authController = {
         return res.status(403).json({ error: "Clients cannot be deleted through this endpoint. Use the client management endpoint." });
       }
 
-      await userModel.delete(userId);
-      res.status(200).json({ message: "User deleted successfully" });
+      await userModel.softDelete(userId);
+      res.status(200).json({ message: "User soft-deleted successfully" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while deleting user" });
