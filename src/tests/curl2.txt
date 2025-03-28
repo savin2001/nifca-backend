@@ -9,7 +9,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"admin@nifca.com","password":"adminpassword"}'
+-d '{"email":"allenpane399@gmail.com","password":"adminpass"}'
 
 
 GET /api/auth/verify?token={{verificationToken}} - Verify an admin user’s email.
@@ -18,24 +18,24 @@ curl -X GET "http://localhost:3000/api/auth/verify?token={{verificationToken}}"
 POST /api/auth/change-password - Change an admin user’s password.
 curl -X POST http://localhost:3000/api/auth/change-password \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{adminToken}}" \
--d '{"oldPassword":"adminpassword","newPassword":"newadminpass"}'
+-H "Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MzI1MCwiZXhwIjoxNzQzMDg2ODUwfQ.lHShHRqc84F1wrTHf4V0rfqZJB8T9IGKHVVdHNScuas"" \
+-d '{"oldPassword":"adminpass","newPassword":"newadminpass"}'
 
 POST /api/auth/logout - Logout an admin user.
 curl -X POST http://localhost:3000/api/auth/logout \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{adminToken}}"
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MzMyMSwiZXhwIjoxNzQzMDg2OTIxfQ.Kf1BaAggv-W1zc46nILd63rZNUBOdi2KeIr-BX0_Sv0"
 
 ================================Client Authentication APIs (/api/client/auth/*)
 POST /api/client/auth/register - Register a new client.
 curl -X POST http://localhost:3000/api/client/auth/register \
 -H "Content-Type: application/json" \
--d '{"username":"testclient4","email":"testclient4@example.com","password":"clientpass","company_id":2}'
+-d '{"username":"testclient4","email":"allenpane399@gmail.com","password":"clientpass","company_id":1}'
 
 POST /api/client/auth/login - Login as a client (session-based).
 curl -X POST http://localhost:3000/api/client/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
 
 GET /api/client/auth/verify?token={{verificationToken}} - Verify a client’s email.
 curl -X GET "http://localhost:3000/api/client/auth/verify?token={{verificationToken}}"
@@ -43,13 +43,13 @@ curl -X GET "http://localhost:3000/api/client/auth/verify?token={{verificationTo
 POST /api/client/auth/activate - Activate a client’s account.
 curl -X POST http://localhost:3000/api/client/auth/activate \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
 
 
-POST /api/client/auth/request-password-reset - Request a password reset for a client.
-curl -X POST http://localhost:3000/api/client/auth/activate \
+POST /api/client/auth/request-password-reset - Request a password reset for a client
+curl -X POST http://localhost:3000/api/client/auth/request-password-reset \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"newclient2@example.com"}'
 
 POST /api/client/auth/reset-password - Reset a client’s password.
 curl -X POST http://localhost:3000/api/client/auth/change-password \
