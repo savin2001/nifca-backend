@@ -46,7 +46,7 @@ const authController = {
         email,
         password,
         role_id,
-        company_id: company_id || 1, // Default to NIFCA for admin users
+        company_id: company_id || 1,
         created_by: adminId,
       });
 
@@ -56,6 +56,108 @@ const authController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during registration" });
+    }
+  },
+
+  async getAllUsers(req, res) {
+    const adminId = req.user.userId;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can view all users." });
+      }
+
+      const users = await userModel.findAll();
+      res.status(200).json(users);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching users" });
+    }
+  },
+
+  async getUserById(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can view user details." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.status(200).json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching user" });
+    }
+  },
+
+  async updateUser(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+    const { username, email, role_id, company_id, status, enabled } = req.body;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can update users." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be updated through this endpoint. Use the client management endpoint." });
+      }
+
+      const updatedUser = await userModel.update(userId, {
+        username: username || user.username,
+        email: email || user.email,
+        role_id: role_id || user.role_id,
+        company_id: company_id || user.company_id,
+        status: status || user.status,
+        enabled: enabled !== undefined ? enabled : user.enabled,
+      });
+
+      res.status(200).json({ message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while updating user" });
+    }
+  },
+
+  async deleteUser(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can delete users." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be deleted through this endpoint. Use the client management endpoint." });
+      }
+
+      await userModel.delete(userId);
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while deleting user" });
     }
   },
 
@@ -88,7 +190,7 @@ const authController = {
       await userModel.resetFailedAttempts(user.id);
       await userModel.updateLastLogin(user.id);
 
-      const expiresIn = 3600; // 1 hour in seconds
+      const expiresIn = 3600;
       const token = jwt.sign(
         { userId: user.id, role: user.role_id, companyId: user.company_id },
         process.env.JWT_SECRET,
