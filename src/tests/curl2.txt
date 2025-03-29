@@ -13,8 +13,8 @@ curl -X POST http://localhost:3000/api/auth/login \
 
  curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"siteadmin@nifca.com","password":"adminpassword123"}'
 
-curl -X POST http://localhost:3000/api/auth/login 
--H "Content-Type: application/json" 
+curl -X POST http://localhost:3000/api/auth/login \
+-H "Content-Type: application/json" \
 -d '{"email":"allenpane399@gmail.com","password":"contentpass"}'
 
 
@@ -26,6 +26,24 @@ curl -X POST http://localhost:3000/api/auth/change-password \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer {{adminToken}}" \
 -d '{"oldPassword":"adminpassword","newPassword":"newadminpass"}'
+
+PATCH /api/users/{{user_id}}/disable - disable user
+curl -X PATCH http://localhost:3000/api/users/2/disable \
+-H "Authorization: Bearer {{siteAdminToken}}"
+
+PATCH /api/users/{{user_id}}/enable - enable user
+curl -X PATCH http://localhost:3000/api/users/2/disable \
+-H "Authorization: Bearer {{siteAdminToken}}"
+
+PATCH /api/users/{{user_id}}/reset-password - site admin reseting user password
+curl -X PATCH http://localhost:3000/api/users/2/reset-password \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"newPassword":"newcontentpass2"}'
+
+POST /api/users/{{user_id}}/force-logout - site admin force logout
+curl -X POST http://localhost:3000/api/users/2/force-logout \
+-H "Authorization: Bearer {{siteAdminToken}}"
 
 POST /api/auth/logout - Logout an admin user.
 curl -X POST http://localhost:3000/api/auth/logout \

@@ -146,7 +146,7 @@ const authController = {
         return res.status(401).json({ error: "Old password is incorrect" });
       }
 
-      await userModel.updatePassword(userId, newPassword);
+      await userModel.updatePassword(userId, newPassword, userId);
       await userModel.removeAllTokens(userId);
 
       res.status(200).json({ message: "Password changed successfully. Please log in again." });
@@ -176,82 +176,6 @@ const authController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during logout" });
-    }
-  },
-
-  // New methods for user management (Site Admin only)
-  async getAllUsers(req, res) {
-    const userId = req.user.userId;
-    try {
-      const user = await userModel.findById(userId);
-      if (user.role_id !== 1) {
-        return res.status(403).json({ error: "Only site admins can access this endpoint." });
-      }
-
-      const users = await userModel.getAllUsers();
-      res.status(200).json(users);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error while retrieving users" });
-    }
-  },
-
-  async updateUser(req, res) {
-    const userId = req.user.userId;
-    const targetUserId = parseInt(req.params.id);
-    const updates = req.body;
-
-    try {
-      const user = await userModel.findById(userId);
-      if (user.role_id !== 1) {
-        return res.status(403).json({ error: "Only site admins can access this endpoint." });
-      }
-
-      const targetUser = await userModel.findById(targetUserId);
-      if (!targetUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (targetUser.role_id === 7) {
-        return res.status(403).json({ error: "Clients cannot be managed through this endpoint. Use the client management endpoint." });
-      }
-
-      const updatedUser = await userModel.updateUser(targetUserId, updates);
-      res.status(200).json({ message: "User updated successfully", user: updatedUser });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error while updating user" });
-    }
-  },
-
-  async deleteUser(req, res) {
-    const userId = req.user.userId;
-    const targetUserId = parseInt(req.params.id);
-
-    try {
-      const user = await userModel.findById(userId);
-      if (user.role_id !== 1) {
-        return res.status(403).json({ error: "Only site admins can access this endpoint." });
-      }
-
-      const targetUser = await userModel.findById(targetUserId);
-      if (!targetUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (targetUser.role_id === 7) {
-        return res.status(403).json({ error: "Clients cannot be managed through this endpoint. Use the client management endpoint." });
-      }
-
-      if (targetUserId === userId) {
-        return res.status(400).json({ error: "You cannot delete your own account." });
-      }
-
-      await userModel.deleteUser(targetUserId);
-      res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error while deleting user" });
     }
   },
 };
