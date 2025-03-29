@@ -46,7 +46,7 @@ const authController = {
         email,
         password,
         role_id,
-        company_id: company_id || 1, // Default to NIFCA for admin users
+        company_id: company_id || 1,
         created_by: adminId,
       });
 
@@ -88,7 +88,7 @@ const authController = {
       await userModel.resetFailedAttempts(user.id);
       await userModel.updateLastLogin(user.id);
 
-      const expiresIn = 3600; // 1 hour in seconds
+      const expiresIn = 3600;
       const token = jwt.sign(
         { userId: user.id, role: user.role_id, companyId: user.company_id },
         process.env.JWT_SECRET,
@@ -176,6 +176,82 @@ const authController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during logout" });
+    }
+  },
+
+  // New methods for user management (Site Admin only)
+  async getAllUsers(req, res) {
+    const userId = req.user.userId;
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can access this endpoint." });
+      }
+
+      const users = await userModel.getAllUsers();
+      res.status(200).json(users);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while retrieving users" });
+    }
+  },
+
+  async updateUser(req, res) {
+    const userId = req.user.userId;
+    const targetUserId = parseInt(req.params.id);
+    const updates = req.body;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can access this endpoint." });
+      }
+
+      const targetUser = await userModel.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (targetUser.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be managed through this endpoint. Use the client management endpoint." });
+      }
+
+      const updatedUser = await userModel.updateUser(targetUserId, updates);
+      res.status(200).json({ message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while updating user" });
+    }
+  },
+
+  async deleteUser(req, res) {
+    const userId = req.user.userId;
+    const targetUserId = parseInt(req.params.id);
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can access this endpoint." });
+      }
+
+      const targetUser = await userModel.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (targetUser.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be managed through this endpoint. Use the client management endpoint." });
+      }
+
+      if (targetUserId === userId) {
+        return res.status(400).json({ error: "You cannot delete your own account." });
+      }
+
+      await userModel.deleteUser(targetUserId);
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while deleting user" });
     }
   },
 };

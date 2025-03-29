@@ -9,7 +9,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"admin@nifca.com","password":"adminpassword"}'
+-d '{"email":"admin@nifca.com","password":"adminpassword123"}'
 
 
 GET /api/auth/verify?token={{verificationToken}} - Verify an admin user’s email.
