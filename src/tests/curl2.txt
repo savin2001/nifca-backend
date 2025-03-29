@@ -2,14 +2,18 @@
 POST /api/auth/register - Register a new admin user (site admin only).
 curl -X POST http://localhost:3000/api/auth/register \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMzLCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MjE3MiwiZXhwIjoxNzQzMDg1NzcyfQ.yz2UgHNyN5gvPDAzX1fDFqlcn3sFPT7_fJ5_PYoruDw" \
--d '{"username":"newadmin","email":"allenpane399@gmail.com","password":"adminpass","role_id":2,"company_id":1}'
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"username":"contentadmin","email":"allenpane399@gmail.com","password":"contentpass","role_id":2,"company_id":1}'
 
 
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
 -H "Content-Type: application/json" \
 -d '{"email":"admin@nifca.com","password":"adminpassword"}'
+
+curl -X POST http://localhost:3000/api/auth/login 
+-H "Content-Type: application/json" 
+-d '{"email":"allenpane399@gmail.com","password":"contentpass"}'
 
 
 GET /api/auth/verify?token={{verificationToken}} - Verify an admin user’s email.
@@ -24,7 +28,69 @@ curl -X POST http://localhost:3000/api/auth/change-password \
 POST /api/auth/logout - Logout an admin user.
 curl -X POST http://localhost:3000/api/auth/logout \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{adminToken}}"
+-H "Authorization: Bearer {{adminToken}}"\
+
+===============================Content admin routes
+
+-------------------------------NEWS
+POST /api/content/news - create a new news article
+curl -X POST http://localhost:3000/api/content/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"title":"New Website Launch","content":"We are excited to announce the launch of our new website!"}'
+
+GET /api/content/news - to get all news
+curl -X GET http://localhost:3000/api/content/news
+
+PUT /api/content/news/1 - to update news artricle
+curl -X PUT http://localhost:3000/api/content/news/1 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"title":"Updated Website Launch","content":"We are excited to announce the updated launch of our new website!"}'
+
+DELETE /api/content/news/{{news_id}}
+curl -X DELETE http://localhost:3000/api/content/news/1 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+--------------------------------EVENTS
+POST /api/content/events create events
+curl -X POST http://localhost:3000/api/content/events \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"title":"Annual Gala","description":"Join us for our annual gala event.","event_date":"2025-12-01T18:00:00","location":"NIFCA Headquarters"}'
+
+GET /api/content/events - to get all events
+curl -X GET http://localhost:3000/api/content/events
+
+PUT /api/content/events/{{event_id}} - modify events
+curl -X PUT http://localhost:3000/api/content/events/3 -H "Content-Type: application/json" -H "Authorization: Bearer {{contentAdminToken}}" 
+-d '{"title":"Last Gala","description":"Join us for our last gala event.","event_date":"2025-12-03T18:00:00","location":"NIFCA Headquarters"}'
+
+DELETE /api/content/events/{{event_id}} - delete events
+curl -X DELETE http://localhost:3000/api/content/events/3 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+-----------------------------GALLERY
+POST /api/content/gallery - to add gallery items
+curl -X POST http://localhost:3000/api/content/gallery \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"type":"picture","url":"https://example.com/picture.jpg","caption":"Event photo from the Annual Gala"}'
+
+GET /api/content/gallery - get all gallery items
+curl -X GET http://localhost:3000/api/content/gallery
+
+PUT /api/content/gallery/{{media_id}}
+curl -X PUT http://localhost:3000/api/content/gallery/2 
+-H "Content-Type: application/json" 
+-H "Authorization: Bearer {{contentAdminToken}}" 
+-d '{"type":"video","url":"https://example.com/video.mp4","caption":"Main video from the Annual Gala"}'
+
+DELETE /api/content/events/{{media_id}} - delete media
+curl -X DELETE http://localhost:3000/api/content/gallery/3 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+
 
 ================================Client Authentication APIs (/api/client/auth/*)
 POST /api/client/auth/register - Register a new client.
@@ -70,3 +136,4 @@ POST /api/client/auth/logout - Logout a client.
 curl -X POST http://localhost:3000/api/client/auth/logout \
 -H "Content-Type: application/json" \
 -b cookies.txt
+

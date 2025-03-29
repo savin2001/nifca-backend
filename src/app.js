@@ -8,6 +8,7 @@ const MySQLStore = require("express-mysql-session")(session);
 const db = require("./config/db");
 const authRoutes = require("./routes/auth");
 const clientAuthRoutes = require("./routes/clientAuth"); // New client auth routes
+const contentRoutes = require("./routes/content"); // Add content routes
 const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
 
@@ -47,8 +48,9 @@ app.use(bodyParser.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/client/auth", clientAuthRoutes); // New client auth routes
+app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/client", clientRoutes);
+app.use("/api/content", contentRoutes); // Register content routes
 
 module.exports = app;
