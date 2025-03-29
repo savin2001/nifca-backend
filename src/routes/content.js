@@ -27,24 +27,28 @@ const validateGalleryMedia = [
 // News
 router.post("/news", authMiddleware, validateNews, contentController.createNews);
 router.get("/news", contentController.getAllNews); // Public endpoint
+router.get("/news/:id", param("id").isInt(), contentController.getNewsById); // New route
 router.put("/news/:id", authMiddleware, validateNews, contentController.updateNews);
 router.delete("/news/:id", authMiddleware, param("id").isInt(), contentController.deleteNews);
 
 // Press Releases
 router.post("/press-releases", authMiddleware, validateNews, contentController.createPressRelease);
 router.get("/press-releases", contentController.getAllPressReleases); // Public endpoint
+router.get("/press-releases/:id", param("id").isInt(), contentController.getPressReleaseById); // New route
 router.put("/press-releases/:id", authMiddleware, validateNews, contentController.updatePressRelease);
 router.delete("/press-releases/:id", authMiddleware, param("id").isInt(), contentController.deletePressRelease);
 
 // Events
 router.post("/events", authMiddleware, validateEvent, contentController.createEvent);
 router.get("/events", contentController.getAllEvents); // Public endpoint
+router.get("/events/:id", param("id").isInt(), contentController.getEventById); // New route
 router.put("/events/:id", authMiddleware, validateEvent, contentController.updateEvent);
 router.delete("/events/:id", authMiddleware, param("id").isInt(), contentController.deleteEvent);
 
 // Gallery Media
 router.post("/gallery", authMiddleware, validateGalleryMedia, contentController.createGalleryMedia);
 router.get("/gallery", contentController.getAllGalleryMedia); // Public endpoint
+router.get("/gallery/:id", param("id").isInt(), contentController.getGalleryMediaById); // New route
 router.put("/gallery/:id", authMiddleware, validateGalleryMedia, contentController.updateGalleryMedia);
 router.delete("/gallery/:id", authMiddleware, param("id").isInt(), contentController.deleteGalleryMedia);
 

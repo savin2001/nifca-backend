@@ -38,6 +38,24 @@ const contentController = {
     }
   },
 
+  // New method: Get News by ID
+  async getNewsById(req, res) {
+    const newsId = parseInt(req.params.id);
+
+    try {
+      const news = await contentModel.getNewsById(newsId);
+      if (!news) {
+        return res.status(404).json({ error: "News not found" });
+      }
+      res.status(200).json(news);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while retrieving news" });
+    }
+  },
+
+
+
   async updateNews(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -121,6 +139,22 @@ const contentController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while retrieving press releases" });
+    }
+  },
+
+  // New method: Get Press Release by ID
+  async getPressReleaseById(req, res) {
+    const pressReleaseId = parseInt(req.params.id);
+
+    try {
+      const pressRelease = await contentModel.getPressReleaseById(pressReleaseId);
+      if (!pressRelease) {
+        return res.status(404).json({ error: "Press release not found" });
+      }
+      res.status(200).json(pressRelease);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while retrieving press release" });
     }
   },
 
@@ -216,6 +250,23 @@ const contentController = {
     }
   },
 
+  // New method: Get Event by ID
+  async getEventById(req, res) {
+    const eventId = parseInt(req.params.id);
+
+    try {
+      const event = await contentModel.getEventById(eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.status(200).json(event);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while retrieving event" });
+    }
+  },
+  
+
   async updateEvent(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -300,6 +351,22 @@ const contentController = {
   async getAllGalleryMedia(req, res) {
     try {
       const media = await contentModel.getAllGalleryMedia();
+      res.status(200).json(media);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while retrieving gallery media" });
+    }
+  },
+
+  // New method: Get Gallery Media by ID
+  async getGalleryMediaById(req, res) {
+    const mediaId = parseInt(req.params.id);
+
+    try {
+      const media = await contentModel.getGalleryMediaById(mediaId);
+      if (!media) {
+        return res.status(404).json({ error: "Gallery media not found" });
+      }
       res.status(200).json(media);
     } catch (error) {
       console.error(error);
