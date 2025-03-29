@@ -1,6 +1,6 @@
 // src/routes/auth.js
 const express = require("express");
-const { body, query } = require("express-validator");
+const { body, query, param } = require("express-validator");
 const authController = require("../controllers/authController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -11,7 +11,7 @@ const validateRegistration = [
   body("email").isEmail().withMessage("Invalid email format"),
   body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
   body("role_id").isInt().withMessage("Role ID must be an integer"),
-  body("company_id").optional().isInt().withMessage("Company ID must be an integer if provided"),
+  body("company_id").optional().isInt().withMessage("Company ID must be an integer"),
 ];
 
 const validatePasswordChange = [
@@ -19,10 +19,24 @@ const validatePasswordChange = [
   body("newPassword").isLength({ min: 6 }).withMessage("New password must be at least 6 characters long"),
 ];
 
+const validateUserUpdate = [
+  body("username").optional().isString().isLength({ min: 3 }).withMessage("Username must be at least 3 characters long"),
+  body("email").optional().isEmail().withMessage("Invalid email format"),
+  body("role_id").optional().isInt().withMessage("Role ID must be an integer"),
+  body("company_id").optional().isInt().withMessage("Company ID must be an integer"),
+  body("status").optional().isIn(["active", "inactive"]).withMessage("Status must be 'active' or 'inactive'"),
+  body("enabled").optional().isBoolean().withMessage("Enabled must be a boolean"),
+];
+
 router.post("/register", authMiddleware, validateRegistration, authController.registerUser);
 router.post("/login", authController.loginUser);
 router.get("/verify", query("token").isString(), authController.verifyEmail);
 router.post("/change-password", authMiddleware, validatePasswordChange, authController.changePassword);
 router.post("/logout", authMiddleware, authController.logoutUser);
+
+// New routes for user management (Site Admin only)
+router.get("/users", authMiddleware, authController.getAllUsers);
+router.put("/users/:id", authMiddleware, validateUserUpdate, authController.updateUser);
+router.delete("/users/:id", authMiddleware, param("id").isInt(), authController.deleteUser);
 
 module.exports = router;
