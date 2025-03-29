@@ -5,6 +5,11 @@ curl -X POST http://localhost:3000/api/auth/register \
 -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMzLCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MjE3MiwiZXhwIjoxNzQzMDg1NzcyfQ.yz2UgHNyN5gvPDAzX1fDFqlcn3sFPT7_fJ5_PYoruDw" \
 -d '{"username":"newadmin","email":"allenpane399@gmail.com","password":"adminpass","role_id":2,"company_id":1}'
 
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"username":"contentadmin","email":"contentadmin@nifca.com","password":"contentpass","role_id":2,"company_id":1}'
+
 
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
@@ -70,3 +75,25 @@ POST /api/client/auth/logout - Logout a client.
 curl -X POST http://localhost:3000/api/client/auth/logout \
 -H "Content-Type: application/json" \
 -b cookies.txt
+
+POST /api/auth/news - add news by content admin
+curl -X POST http://localhost:3000/api/auth/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"title":"New Exhibition","content":"We are hosting a new art exhibition next month."}'
+
+GET /api/auth/news - to get all news
+curl -X GET http://localhost:3000/api/auth/news \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+GET /api/auth/news/ - to get an erticle
+curl -X GET http://localhost:3000/api/auth/news/{{newsId}} \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+curl -X PUT http://localhost:3000/api/auth/news/1 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{"title":"Updated Website Launch","content":"We are excited to announce the updated launch of our new website!"}'
+
+curl -X DELETE http://localhost:3000/api/auth/news/1 \
+-H "Authorization: Bearer {{contentAdminToken}}"
