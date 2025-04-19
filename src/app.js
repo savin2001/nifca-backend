@@ -11,6 +11,8 @@ const clientAuthRoutes = require("./routes/clientAuth");
 const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
+const applicationRoutes = require("./routes/application"); // New
+const clientApplicationRoutes = require("./routes/clientApplication"); // New
 
 const app = express();
 
@@ -22,8 +24,8 @@ const sessionStore = new MySQLStore({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   clearExpired: true,
-  checkExpirationInterval: 900000, // Check for expired sessions every 15 minutes
-  expiration: 86400000, // Sessions expire after 24 hours
+  checkExpirationInterval: 900000,
+  expiration: 86400000,
 }, db);
 
 // Apply session middleware only to client routes
@@ -36,9 +38,9 @@ app.use((req, res, next) => {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Set to true in production with HTTPS
+        secure: process.env.NODE_ENV === "production",
       },
     })(req, res, next);
   } else {
@@ -48,7 +50,7 @@ app.use((req, res, next) => {
 
 // Secure CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000", // Replace with your frontend URL
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
   credentials: true,
 }));
 
@@ -60,5 +62,7 @@ app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/applications", applicationRoutes); // New
+app.use("/api/client/applications", clientApplicationRoutes); // New
 
 module.exports = app;

@@ -157,3 +157,19 @@ curl -X POST http://localhost:3000/api/client/auth/logout \
 -H "Content-Type: application/json" \
 -b cookies.txt
 
+=============================================Applications
+POST /api/auth/register - create application admin
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"username":"appadmin","email":"appadmin@nifca.com","password":"appadminpass","role_id":3,"company_id":1}'
+
+POST /api/auth/login   - create application login
+curl -X POST http://localhost:3000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"appadmin@nifca.com","password":"appadminpass"}'
+
+POST /api/client/login   - create clientss login
+curl -X POST http://localhost:3000/api/client/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
