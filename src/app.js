@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const sessionStore = require("./config/sessionStore"); // Use shared store
 const authRoutes = require("./routes/auth");
+const sessionStore = require("./config/sessionStore"); //shared session storage
 const clientAuthRoutes = require("./routes/clientAuth");
 const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");
