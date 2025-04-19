@@ -7,6 +7,7 @@ const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
 const db = require("./config/db");
 const authRoutes = require("./routes/auth");
+const sessionStore = require("./config/sessionStore"); //shared session storage
 const clientAuthRoutes = require("./routes/clientAuth");
 const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");

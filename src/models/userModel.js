@@ -191,6 +191,29 @@ const userModel = {
     );
   },
 
+  async destroyClientSession(userId) {
+    try {
+      // Find the session for the user in the sessions table
+      const [sessions] = await db.query(
+        "SELECT sid FROM sessions WHERE JSON_EXTRACT(data, '$.user.userId') = ?",
+        [userId]
+      );
+
+      // Destroy each session
+      for (const session of sessions) {
+        await new Promise((resolve, reject) => {
+          sessionStore.destroy(session.sid, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    } catch (error) {
+      console.error("Error destroying client session:", error);
+      throw error;
+    }
+  },
+
   async hasDependencies(userId) {
     // Check for content created by the user
     const [content] = await db.query(
