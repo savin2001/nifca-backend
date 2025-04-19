@@ -1,5 +1,5 @@
 // src/middlewares/clientSessionMiddleware.js
-const userModel = require("../models/userModel");
+const userModel = require("../models/clientModel");
 
 const clientSessionMiddleware = async (req, res, next) => {
   // Check if session exists and contains user data
@@ -7,17 +7,17 @@ const clientSessionMiddleware = async (req, res, next) => {
     return res.status(401).json({ error: "Access denied. Please log in." });
   }
 
+  console.log("Session user data:", req.session.user); // Debug log
+
   try {
     // Retrieve user from database using session data
     const user = await userModel.findById(req.session.user.userId);
+    console.log("User lookup result for userId", req.session.user.userId, ":", user); // Debug log
+
     if (!user) {
       return res.status(401).json({ error: "User not found. Please log in again." });
     }
 
-    // Ensure the user is a client (role_id: 7)
-    if (user.role_id !== 7) {
-      return res.status(403).json({ error: "Access denied. Clients only." });
-    }
 
     // Check if the user is active and enabled
     if (user.status === "inactive") {

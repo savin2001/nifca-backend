@@ -47,9 +47,9 @@ app.use(bodyParser.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/client/applications", clientApplicationRoutes);
+app.use("/api/client", clientRoutes);
 
 module.exports = app;

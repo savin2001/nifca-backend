@@ -15,9 +15,7 @@ const clientApplicationController = {
 
     try {
       const user = await userModel.findById(clientId);
-      if (user.role_id !== 7) {
-        return res.status(403).json({ error: "Only clients can create applications" });
-      }
+
 
       const applicationId = await applicationModel.create({ clientId, title, description });
       const application = await applicationModel.findById(applicationId);
@@ -33,10 +31,6 @@ const clientApplicationController = {
 
     try {
       const user = await userModel.findById(clientId);
-      if (user.role_id !== 7) {
-        return res.status(403).json({ error: "Only clients can view their applications" });
-      }
-
       const applications = await applicationModel.getByClientId(clientId);
       res.status(200).json(applications);
     } catch (error) {
@@ -51,9 +45,6 @@ const clientApplicationController = {
 
     try {
       const user = await userModel.findById(clientId);
-      if (user.role_id !== 7) {
-        return res.status(403).json({ error: "Only clients can cancel their applications" });
-      }
 
       const updatedApplication = await applicationModel.cancelApplication(applicationId, clientId);
       res.status(200).json({ message: "Application cancelled successfully", application: updatedApplication });

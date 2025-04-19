@@ -10,10 +10,10 @@ const applicationModel = {
     const applicationId = result.insertId;
 
     // Log the creation action
-    await db.query(
-      "INSERT INTO application_audit_log (application_id, action, performed_by, new_data) VALUES (?, 'create', ?, ?)",
-      [applicationId, clientId, JSON.stringify({ title, description, status: 'pending' })]
-    );
+    // await db.query(
+    //   "INSERT INTO application_audit_log (application_id, action, performed_by, new_data) VALUES (?, 'create', ?, ?)",
+    //   [applicationId, clientId, JSON.stringify({ title, description, status: 'pending' })]
+    // );
 
     return applicationId;
   },
