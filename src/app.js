@@ -4,29 +4,16 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const session = require("express-session");
-const MySQLStore = require("express-mysql-session")(session);
-const db = require("./config/db");
+const sessionStore = require("./config/sessionStore"); // Use shared store
 const authRoutes = require("./routes/auth");
 const clientAuthRoutes = require("./routes/clientAuth");
 const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
-const applicationRoutes = require("./routes/application"); // New
-const clientApplicationRoutes = require("./routes/clientApplication"); // New
+const applicationRoutes = require("./routes/application");
+const clientApplicationRoutes = require("./routes/clientApplication");
 
 const app = express();
-
-// Session store configuration for clients
-const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  clearExpired: true,
-  checkExpirationInterval: 900000,
-  expiration: 86400000,
-}, db);
 
 // Apply session middleware only to client routes
 app.use((req, res, next) => {
@@ -62,7 +49,7 @@ app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
-app.use("/api/applications", applicationRoutes); // New
-app.use("/api/client/applications", clientApplicationRoutes); // New
+app.use("/api/applications", applicationRoutes);
+app.use("/api/client/applications", clientApplicationRoutes);
 
 module.exports = app;

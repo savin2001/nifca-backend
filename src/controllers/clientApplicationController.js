@@ -10,7 +10,7 @@ const clientApplicationController = {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const clientId = req.user.userId;
+    const clientId = req.client.userId; // Changed from req.user.userId
     const { title, description } = req.body;
 
     try {
@@ -29,7 +29,7 @@ const clientApplicationController = {
   },
 
   async getClientApplications(req, res) {
-    const clientId = req.user.userId;
+    const clientId = req.client.userId; // Changed from req.user.userId
 
     try {
       const user = await userModel.findById(clientId);
@@ -46,7 +46,7 @@ const clientApplicationController = {
   },
 
   async cancelApplication(req, res) {
-    const clientId = req.user.userId;
+    const clientId = req.client.userId; // Changed from req.user.userId
     const applicationId = parseInt(req.params.id);
 
     try {
