@@ -52,7 +52,7 @@ const authController = {
 
       await sendVerificationEmail(email, newUser.verificationToken, "admin");
 
-      res.status(201).json({ message: "User registered successfully. Verification email sent." });
+      res.status(201).json({ message: "User registered successfully. An email verification link has been sent to the provided email address. Please check your inbox!" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during registration" });
