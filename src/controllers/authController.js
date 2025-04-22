@@ -29,16 +29,25 @@ const authController = {
       const roleName = role.name;
 
       if (!adminId) {
-        return res.status(403).json({ error: "Only site admins can create users." });
+        return res
+          .status(403)
+          .json({ error: "Only site admins can create users." });
       }
 
       const adminUser = await userModel.findById(adminId);
       if (adminUser.role_id !== 1) {
-        return res.status(403).json({ error: "Only site admins can create other users." });
+        return res
+          .status(403)
+          .json({ error: "Only site admins can create other users." });
       }
 
       if (roleName === "client") {
-        return res.status(403).json({ error: "Clients cannot be registered through this endpoint. Use the client registration endpoint." });
+        return res
+          .status(403)
+          .json({
+            error:
+              "Clients cannot be registered through this endpoint. Use the client registration endpoint.",
+          });
       }
 
       const newUser = await userModel.create({
@@ -50,9 +59,19 @@ const authController = {
         created_by: adminId,
       });
 
-      await sendVerificationEmail(email, newUser.verificationToken, "admin");
+      await sendVerificationEmail(
+        email,
+        newUser.verificationToken,
+        "admin",
+        password
+      );
 
-      res.status(201).json({ message: "User registered successfully. An email verification link has been sent to the provided email address. Please check your inbox!" });
+      res
+        .status(201)
+        .json({
+          message:
+            "User registered successfully. An email verification link has been sent to the provided email address. Please check your inbox!",
+        });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during registration" });
@@ -69,7 +88,11 @@ const authController = {
       }
 
       if (user.status === "inactive") {
-        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+        return res
+          .status(403)
+          .json({
+            error: "Account has been deactivated. Please contact support.",
+          });
       }
 
       if (!user.verified_at) {
@@ -79,7 +102,10 @@ const authController = {
         });
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        user.password_hash
+      );
       if (!isPasswordValid) {
         await userModel.incrementFailedAttempts(user.id);
         return res.status(401).json({ error: "Invalid email or password" });
@@ -99,14 +125,15 @@ const authController = {
       await userModel.storeToken(user.id, token, expiresAt);
 
       if (!user.enabled) {
+        // console.log(user.enabled);
         return res.status(200).json({
           token,
           message: "Please change your password before proceeding",
           forcePasswordChange: true,
         });
+      } else {
+        return res.status(200).json({ token, message: "Login successful" });
       }
-
-      return res.status(200).json({ token, message: "Login successful" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during login" });
@@ -124,7 +151,9 @@ const authController = {
 
       await userModel.verifyEmail(user.id);
 
-      res.status(200).json({ message: "Email verified successfully. You can now log in." });
+      res
+        .status(200)
+        .json({ message: "Email verified successfully. You can now log in." });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during verification" });
@@ -141,7 +170,10 @@ const authController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
+      const isPasswordValid = await bcrypt.compare(
+        oldPassword,
+        user.password_hash
+      );
       if (!isPasswordValid) {
         return res.status(401).json({ error: "Old password is incorrect" });
       }
@@ -149,7 +181,11 @@ const authController = {
       await userModel.updatePassword(userId, newPassword, userId);
       await userModel.removeAllTokens(userId);
 
-      res.status(200).json({ message: "Password changed successfully. Please log in again." });
+      res
+        .status(200)
+        .json({
+          message: "Password changed successfully. Please log in again.",
+        });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during password change" });
@@ -166,7 +202,11 @@ const authController = {
       }
 
       if (user.status === "inactive") {
-        return res.status(403).json({ error: "Account has been deactivated. Please contact support." });
+        return res
+          .status(403)
+          .json({
+            error: "Account has been deactivated. Please contact support.",
+          });
       }
 
       const token = req.header("Authorization")?.replace("Bearer ", "");
