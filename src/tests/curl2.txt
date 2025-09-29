@@ -9,7 +9,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"admin@nifca.com","password":"adminpassword123"}'
+-d '{"email":"osukasavin2001@gmail.com","password":"JdFA52dP#5Nr@y31"}'
 
  curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"siteadmin@nifca.com","password":"adminpassword123"}'
 
@@ -57,16 +57,36 @@ POST /api/content/news - create a new news article
 curl -X POST http://localhost:3000/api/content/news \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer {{contentAdminToken}}" \
--d '{"title":"New Website Launch","content":"We are excited to announce the launch of our new website!"}'
+-d '{
+  "title": "New Test Article 2",
+  "content": "This is the content of the new test article.",
+  "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
+}'
+
 
 GET /api/content/news - to get all news
 curl -X GET http://localhost:3000/api/content/news
 
-PUT /api/content/news/1 - to update news artricle
-curl -X PUT http://localhost:3000/api/content/news/1 \
+GET /api/content/news/ Fetch page 1 (4 articles):
+curl -X GET http://localhost:3000/api/content/news?page=1&limit=4
+
+GET Fetch page 2 (next 4 articles):
+curl -X GET http://localhost:3000/api/content/news?page=2&limit=4
+
+PUT /api/content/news/1 - to update news article
+curl -X PUT http://localhost:3000/api/content/news/10 \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{"title":"Updated Website Launch","content":"We are excited to announce the updated launch of our new website!"}'
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc1OTE3NTk5NiwiZXhwIjoxNzU5MTc5NTk2fQ.oBpxKya05YcZCKAdnsJRBidwudjBOIlwzJbQeZqjcXA" \
+-d '{
+  "title": "Updated Article Title 4",
+  "content": "This is the updated content of the article.",
+  "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
+}'
+
+https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg
+"https://images.pexels.com/photos/16803438/pexels-photo-16803438.jpeg"
+
+
 
 DELETE /api/content/news/{{news_id}}
 curl -X DELETE http://localhost:3000/api/content/news/1 \

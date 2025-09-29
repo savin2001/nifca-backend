@@ -3,30 +3,39 @@ const db = require("../config/db");
 
 const contentModel = {
   // News
-  async createNews({ title, content, created_by }) {
+  async createNews({ title, content, created_by, picture }) {
     const [result] = await db.query(
-      "INSERT INTO news (title, content, created_by) VALUES (?, ?, ?)",
-      [title, content, created_by]
+      "INSERT INTO news (title, content, created_by, picture) VALUES (?, ?, ?, ?)",
+      [title, content, created_by, picture]
     );
     return result.insertId;
   },
 
-  async getAllNews() {
-    const [rows] = await db.query("SELECT * FROM news");
-    return rows;
+  async getAllNewsPaginated({ limit, offset }) {
+    const [[{ total }]] = await db.query("SELECT COUNT(*) as total FROM news");
+    const [rows] = await db.query("SELECT id, title, content, picture, created_at FROM news ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
+    return { total, rows };
   },
 
   async getNewsById(id) {
-    const [rows] = await db.query("SELECT * FROM news WHERE id = ?", [id]);
+    const [rows] = await db.query("SELECT id, title, content, picture, created_at FROM news WHERE id = ?", [id]);
     return rows[0];
   },
 
-  async updateNews(id, { title, content }) {
-    await db.query("UPDATE news SET title = ?, content = ?, updated_at = NOW() WHERE id = ?", [
-      title,
-      content,
-      id,
-    ]);
+  async updateNews(id, data) {
+    const fields = Object.keys(data);
+    const values = Object.values(data);
+
+    if (fields.length === 0) {
+      return this.getNewsById(id);
+    }
+
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+
+    const query = `UPDATE news SET ${setClause}, updated_at = NOW() WHERE id = ?`;
+    const queryParams = [...values, id];
+
+    await db.query(query, queryParams);
     return await this.getNewsById(id);
   },
 

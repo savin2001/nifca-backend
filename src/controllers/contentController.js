@@ -2,6 +2,40 @@
 const contentModel = require("../models/contentModel");
 const userModel = require("../models/userModel");
 const { validationResult } = require("express-validator");
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+async function downloadImage(url, newsId) {
+  if (!url) return null;
+  try {
+    const response = await axios({ 
+      url, 
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+      }
+    });
+    const assetsDir = path.join(__dirname, '../assets/news');
+    if (!fs.existsSync(assetsDir)) {
+      fs.mkdirSync(assetsDir, { recursive: true });
+    }
+    const randomString = Math.random().toString(36).substring(2, 7);
+    const extension = path.extname(new URL(url).pathname);
+    const filename = `nifca_news_${randomString}_${newsId}${extension}`;
+    const imagePath = path.join(assetsDir, filename);
+    const writer = fs.createWriteStream(imagePath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => resolve(`/assets/news/${filename}`));
+      writer.on('error', reject);
+    });
+  } catch (error) {
+    console.error('Error downloading image:', error);
+    return null;
+  }
+}
 
 const contentController = {
   // News
@@ -12,7 +46,7 @@ const contentController = {
     }
 
     const userId = req.user.userId;
-    const { title, content } = req.body;
+    const { title, content, picture: pictureUrl } = req.body;
 
     try {
       const user = await userModel.findById(userId);
@@ -20,7 +54,16 @@ const contentController = {
         return res.status(403).json({ error: "Only content admins can create news." });
       }
 
-      const newsId = await contentModel.createNews({ title, content, created_by: userId });
+      // Create news article first to get the newsId
+      const newsId = await contentModel.createNews({ title, content, created_by: userId, picture: null });
+
+      let picturePath = null;
+      if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, newsId);
+        // Update the news article with the picture path
+        await contentModel.updateNews(newsId, { picture: picturePath });
+      }
+
       res.status(201).json({ message: "News created successfully", newsId });
     } catch (error) {
       console.error(error);
@@ -29,9 +72,27 @@ const contentController = {
   },
 
   async getAllNews(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
+
     try {
-      const news = await contentModel.getAllNews();
-      res.status(200).json(news);
+      const { total, rows: news } = await contentModel.getAllNewsPaginated({ limit, offset });
+      
+      const formattedNews = news.map(item => ({
+        ...item,
+        date: new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(item.created_at)),
+        body: item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content,
+      }));
+
+      res.status(200).json({
+        news: formattedNews,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while retrieving news" });
@@ -64,7 +125,7 @@ const contentController = {
 
     const userId = req.user.userId;
     const newsId = parseInt(req.params.id);
-    const { title, content } = req.body;
+    const { title, content, picture: pictureUrl } = req.body;
 
     try {
       const user = await userModel.findById(userId);
@@ -77,7 +138,12 @@ const contentController = {
         return res.status(404).json({ error: "News not found" });
       }
 
-      const updatedNews = await contentModel.updateNews(newsId, { title, content });
+      let picturePath = news.picture;
+      if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, newsId);
+      }
+
+      const updatedNews = await contentModel.updateNews(newsId, { title, content, picture: picturePath });
       res.status(200).json({ message: "News updated successfully", news: updatedNews });
     } catch (error) {
       console.error(error);

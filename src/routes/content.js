@@ -9,6 +9,7 @@ const router = express.Router();
 const validateNews = [
   body("title").isString().isLength({ min: 1 }).withMessage("Title is required"),
   body("content").isString().isLength({ min: 1 }).withMessage("Content is required"),
+  body("picture").optional().isURL().withMessage("Picture must be a valid URL"),
 ];
 
 const validateEvent = [
