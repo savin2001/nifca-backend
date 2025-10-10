@@ -52,9 +52,10 @@ const contentModel = {
     return result.insertId;
   },
 
-  async getAllPressReleases() {
-    const [rows] = await db.query("SELECT * FROM press_releases");
-    return rows;
+  async getAllPressReleasesPaginated({ limit, offset }) {
+    const [[{ total }]] = await db.query("SELECT COUNT(*) as total FROM press_releases");
+    const [rows] = await db.query("SELECT id, title, content, created_at FROM press_releases ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
+    return { total, rows };
   },
 
   async getPressReleaseById(id) {

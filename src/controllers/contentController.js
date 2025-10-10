@@ -199,9 +199,27 @@ const contentController = {
   },
 
   async getAllPressReleases(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
+
     try {
-      const pressReleases = await contentModel.getAllPressReleases();
-      res.status(200).json(pressReleases);
+      const { total, rows: pressReleases } = await contentModel.getAllPressReleasesPaginated({ limit, offset });
+
+      const formattedPressReleases = pressReleases.map(item => ({
+        ...item,
+        date: new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(item.created_at)),
+        body: item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content,
+      }));
+
+      res.status(200).json({
+        pressReleases: formattedPressReleases,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while retrieving press releases" });

@@ -92,6 +92,35 @@ DELETE /api/content/news/{{news_id}}
 curl -X DELETE http://localhost:3000/api/content/news/1 \
 -H "Authorization: Bearer {{contentAdminToken}}"
 
+-------------------------------PRESS RELEASES
+POST /api/content/press-releases - create a new press release
+curl -X POST http://localhost:3000/api/content/press-releases \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "Official NIFCA Statement on New Regulations",
+  "content": "This is the official statement regarding the new 2025 fishing regulations."
+}'
+
+GET /api/content/press-releases - to get all press releases with pagination
+curl -X GET http://localhost:3000/api/content/press-releases?page=1&limit=4
+
+GET /api/content/press-releases/{{press_release_id}} - to get a single press release by ID
+curl -X GET http://localhost:3000/api/content/press-releases/1
+
+PUT /api/content/press-releases/{{press_release_id}} - to update a press release
+curl -X PUT http://localhost:3000/api/content/press-releases/1 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "Updated NIFCA Statement",
+  "content": "This is the updated official statement."
+}'
+
+DELETE /api/content/press-releases/{{press_release_id}}
+curl -X DELETE http://localhost:3000/api/content/press-releases/1 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
 --------------------------------EVENTS
 POST /api/content/events create events
 curl -X POST http://localhost:3000/api/content/events \
