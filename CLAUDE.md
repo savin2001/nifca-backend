@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the NIFCA (National Independence Festival Creative Arts) backend API server built with Node.js and Express. The system manages two distinct user types (internal users and external clients) with separate authentication mechanisms, content management, and an application submission/review workflow.
+This is the NIFCA (Nairobi International Finance Center) backend API server built with Node.js and Express. The system manages two distinct user types (internal users and external clients) with separate authentication mechanisms, content management, and an application submission/review workflow.
 
 ## Development Commands
 

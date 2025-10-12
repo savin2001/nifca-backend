@@ -40,13 +40,9 @@ async function downloadImage(url, newsId) {
 const contentController = {
   // News
   async createNews(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const { title, content, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -54,17 +50,30 @@ const contentController = {
         return res.status(403).json({ error: "Only content admins can create news." });
       }
 
+      // Validate required fields
+      if (!title || !content) {
+        return res.status(400).json({ error: "Title and content are required" });
+      }
+
       // Create news article first to get the newsId
       const newsId = await contentModel.createNews({ title, content, created_by: userId, picture: null });
 
       let picturePath = null;
-      if (pictureUrl) {
-        picturePath = await downloadImage(pictureUrl, newsId);
-        // Update the news article with the picture path
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/news/${uploadedFile.filename}`;
         await contentModel.updateNews(newsId, { picture: picturePath });
       }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, newsId);
+        if (picturePath) {
+          await contentModel.updateNews(newsId, { picture: picturePath });
+        }
+      }
 
-      res.status(201).json({ message: "News created successfully", newsId });
+      res.status(201).json({ message: "News created successfully", newsId, picture: picturePath });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating news" });
@@ -118,14 +127,10 @@ const contentController = {
 
 
   async updateNews(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const newsId = parseInt(req.params.id);
     const { title, content, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -139,8 +144,17 @@ const contentController = {
       }
 
       let picturePath = news.picture;
-      if (pictureUrl) {
-        picturePath = await downloadImage(pictureUrl, newsId);
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/news/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        const downloadedPath = await downloadImage(pictureUrl, newsId);
+        if (downloadedPath) {
+          picturePath = downloadedPath;
+        }
       }
 
       const updatedNews = await contentModel.updateNews(newsId, { title, content, picture: picturePath });
@@ -296,13 +310,9 @@ const contentController = {
 
   // Events
   async createEvent(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -310,17 +320,30 @@ const contentController = {
         return res.status(403).json({ error: "Only content admins can create events." });
       }
 
+      // Validate required fields
+      if (!title || !description || !event_start_date || !location) {
+        return res.status(400).json({ error: "Title, description, event_start_date, and location are required" });
+      }
+
       // Create event first to get the ID
       const eventId = await contentModel.createEvent({ title, description, event_start_date, event_end_date, location, created_by: userId, picture: null });
 
       let picturePath = null;
-      if (pictureUrl) {
-        picturePath = await downloadImage(pictureUrl, eventId);
-        // Now update the event with the picture path
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/events/${uploadedFile.filename}`;
         await contentModel.updateEvent(eventId, { picture: picturePath });
       }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, eventId);
+        if (picturePath) {
+          await contentModel.updateEvent(eventId, { picture: picturePath });
+        }
+      }
 
-      res.status(201).json({ message: "Event created successfully", eventId });
+      res.status(201).json({ message: "Event created successfully", eventId, picture: picturePath });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating event" });
@@ -366,14 +389,10 @@ const contentController = {
   
 
   async updateEvent(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const eventId = parseInt(req.params.id);
     const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -387,8 +406,17 @@ const contentController = {
       }
 
       let picturePath = event.picture;
-      if (pictureUrl) {
-        picturePath = await downloadImage(pictureUrl, eventId);
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/events/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        const downloadedPath = await downloadImage(pictureUrl, eventId);
+        if (downloadedPath) {
+          picturePath = downloadedPath;
+        }
       }
 
       const updateData = { title, description, event_start_date, event_end_date, location, picture: picturePath };
@@ -425,13 +453,9 @@ const contentController = {
 
   // Gallery Media
   async createGalleryMedia(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const { type, url, caption } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -439,8 +463,26 @@ const contentController = {
         return res.status(403).json({ error: "Only content admins can create gallery media." });
       }
 
-      const mediaId = await contentModel.createGalleryMedia({ type, url, caption, created_by: userId });
-      res.status(201).json({ message: "Gallery media created successfully", mediaId });
+      // Validate required fields
+      if (!type) {
+        return res.status(400).json({ error: "Type is required (picture or video)" });
+      }
+
+      if (!['picture', 'video'].includes(type)) {
+        return res.status(400).json({ error: "Type must be 'picture' or 'video'" });
+      }
+
+      let mediaUrl = url;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        mediaUrl = `/assets/gallery/${uploadedFile.filename}`;
+      } else if (!url) {
+        return res.status(400).json({ error: "Either mediaFile or url must be provided" });
+      }
+
+      const mediaId = await contentModel.createGalleryMedia({ type, url: mediaUrl, caption, created_by: userId });
+      res.status(201).json({ message: "Gallery media created successfully", mediaId, url: mediaUrl });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating gallery media" });

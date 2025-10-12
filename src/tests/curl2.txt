@@ -54,14 +54,26 @@ curl -X POST http://localhost:3000/api/auth/logout \
 
 -------------------------------NEWS
 POST /api/content/news - create a new news article
+
+Method 1: Using URL (JSON)
 curl -X POST http://localhost:3000/api/content/news \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc2MDA4NTc4NywiZXhwIjoxNzYwMDg5Mzg3fQ.03Teo-NzqXk0rSUKfeaws220-thmaUl3jB9DkwOB-3Q" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
 -d '{
   "title": "New Test Article Today",
   "content": "This is the content of the new test article from today.",
   "picture": "https://images.unsplash.com/photo-1759928222798-63e73f690563?q=80&w=1172&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 }'
+
+Method 2: Using File Upload (multipart/form-data)
+curl -X POST http://localhost:3000/api/content/news \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Breaking News: File Upload Test" \
+-F "content=This article was created using file upload instead of URL" \
+-F "pictureFile=@/path/to/your/image.jpg"
+
+Note: When both pictureFile and picture are provided, pictureFile takes priority.
+Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
 
 
 GET /api/content/news - to get all news
@@ -73,18 +85,24 @@ curl -X GET http://localhost:3000/api/content/news?page=1&limit=4
 GET Fetch page 2 (next 4 articles):
 curl -X GET http://localhost:3000/api/content/news?page=2&limit=4
 
-PUT /api/content/news/1 - to update news article
+PUT /api/content/news/{{news_id}} - to update news article
+
+Method 1: Update with URL (JSON)
 curl -X PUT http://localhost:3000/api/content/news/10 \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc2MDA4NTc4NywiZXhwIjoxNzYwMDg5Mzg3fQ.03Teo-NzqXk0rSUKfeaws220-thmaUl3jB9DkwOB-3Q" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
 -d '{
   "title": "Updated Article Title 4",
   "content": "This is the updated content of the article.",
   "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
 }'
 
-https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg
-"https://images.pexels.com/photos/16803438/pexels-photo-16803438.jpeg"
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/news/10 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Updated with New Image File" \
+-F "content=This update includes a newly uploaded image" \
+-F "pictureFile=@/path/to/updated-image.jpg"
 
 
 
@@ -123,6 +141,8 @@ curl -X DELETE http://localhost:3000/api/content/press-releases/1 \
 
 --------------------------------EVENTS
 POST /api/content/events create events
+
+Method 1: Using URL (JSON)
 curl -X POST http://localhost:3000/api/content/events \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer {{contentAdminToken}}" \
@@ -135,11 +155,28 @@ curl -X POST http://localhost:3000/api/content/events \
   "picture": "https://example.com/images/gala_poster.jpg"
 }'
 
+Method 2: Using File Upload (multipart/form-data)
+curl -X POST http://localhost:3000/api/content/events \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Digital Arts Workshop" \
+-F "description=Learn digital art techniques from professionals" \
+-F "event_start_date=2025-07-01T14:00:00" \
+-F "event_end_date=2025-07-01T17:00:00" \
+-F "location=Arts Center Room 3" \
+-F "pictureFile=@/path/to/event-poster.jpg"
+
+Note: When both pictureFile and picture are provided, pictureFile takes priority.
+Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
+
 GET /api/content/events - to get all events with pagination
 curl -X GET http://localhost:3000/api/content/events?page=1&limit=4
 
 PUT /api/content/events/{{event_id}} - modify events
-curl -X PUT http://localhost:3000/api/content/events/3 -H "Content-Type: application/json" -H "Authorization: Bearer {{contentAdminToken}}" 
+
+Method 1: Update with URL (JSON)
+curl -X PUT http://localhost:3000/api/content/events/3 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
 -d '{
   "title":"Last Gala",
   "description":"Join us for our last gala event.",
@@ -148,6 +185,16 @@ curl -X PUT http://localhost:3000/api/content/events/3 -H "Content-Type: applica
   "location":"NIFCA Headquarters",
   "picture": "https://example.com/images/last_gala_poster.jpg"
 }'
+
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/events/3 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Updated Event with New Poster" \
+-F "description=Updated description with new image" \
+-F "event_start_date=2025-12-03T18:00:00" \
+-F "event_end_date=2025-12-03T23:00:00" \
+-F "location=New Venue" \
+-F "pictureFile=@/path/to/new-event-poster.jpg"
 
 DELETE /api/content/events/{{event_id}} - delete events
 curl -X DELETE http://localhost:3000/api/content/events/3 \

@@ -27,6 +27,13 @@ app.use(cors({
 // Serve static files from the assets directory
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+// Also ensure events directory exists
+const fs = require('fs');
+const eventsDir = path.join(__dirname, 'assets/events');
+if (!fs.existsSync(eventsDir)) {
+  fs.mkdirSync(eventsDir, { recursive: true });
+}
+
 // Session store configuration for clients
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST,
