@@ -56,11 +56,11 @@ curl -X POST http://localhost:3000/api/auth/logout \
 POST /api/content/news - create a new news article
 curl -X POST http://localhost:3000/api/content/news \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc2MDA4NTc4NywiZXhwIjoxNzYwMDg5Mzg3fQ.03Teo-NzqXk0rSUKfeaws220-thmaUl3jB9DkwOB-3Q" \
 -d '{
-  "title": "New Test Article 2",
-  "content": "This is the content of the new test article.",
-  "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
+  "title": "New Test Article Today",
+  "content": "This is the content of the new test article from today.",
+  "picture": "https://images.unsplash.com/photo-1759928222798-63e73f690563?q=80&w=1172&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 }'
 
 
@@ -76,7 +76,7 @@ curl -X GET http://localhost:3000/api/content/news?page=2&limit=4
 PUT /api/content/news/1 - to update news article
 curl -X PUT http://localhost:3000/api/content/news/10 \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc1OTE3NTk5NiwiZXhwIjoxNzU5MTc5NTk2fQ.oBpxKya05YcZCKAdnsJRBidwudjBOIlwzJbQeZqjcXA" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc2MDA4NTc4NywiZXhwIjoxNzYwMDg5Mzg3fQ.03Teo-NzqXk0rSUKfeaws220-thmaUl3jB9DkwOB-3Q" \
 -d '{
   "title": "Updated Article Title 4",
   "content": "This is the updated content of the article.",
