@@ -302,7 +302,7 @@ const contentController = {
     }
 
     const userId = req.user.userId;
-    const { title, description, event_date, location } = req.body;
+    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
 
     try {
       const user = await userModel.findById(userId);
@@ -310,13 +310,16 @@ const contentController = {
         return res.status(403).json({ error: "Only content admins can create events." });
       }
 
-      const eventId = await contentModel.createEvent({
-        title,
-        description,
-        event_date,
-        location,
-        created_by: userId,
-      });
+      // Create event first to get the ID
+      const eventId = await contentModel.createEvent({ title, description, event_start_date, event_end_date, location, created_by: userId, picture: null });
+
+      let picturePath = null;
+      if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, eventId);
+        // Now update the event with the picture path
+        await contentModel.updateEvent(eventId, { picture: picturePath });
+      }
+
       res.status(201).json({ message: "Event created successfully", eventId });
     } catch (error) {
       console.error(error);
@@ -325,9 +328,20 @@ const contentController = {
   },
 
   async getAllEvents(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
+
     try {
-      const events = await contentModel.getAllEvents();
-      res.status(200).json(events);
+      const { total, rows: events } = await contentModel.getAllEventsPaginated({ limit, offset });
+      res.status(200).json({
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while retrieving events" });
@@ -359,7 +373,7 @@ const contentController = {
 
     const userId = req.user.userId;
     const eventId = parseInt(req.params.id);
-    const { title, description, event_date, location } = req.body;
+    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
 
     try {
       const user = await userModel.findById(userId);
@@ -372,12 +386,13 @@ const contentController = {
         return res.status(404).json({ error: "Event not found" });
       }
 
-      const updatedEvent = await contentModel.updateEvent(eventId, {
-        title,
-        description,
-        event_date,
-        location,
-      });
+      let picturePath = event.picture;
+      if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, eventId);
+      }
+
+      const updateData = { title, description, event_start_date, event_end_date, location, picture: picturePath };
+      const updatedEvent = await contentModel.updateEvent(eventId, updateData);
       res.status(200).json({ message: "Event updated successfully", event: updatedEvent });
     } catch (error) {
       console.error(error);

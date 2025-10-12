@@ -76,29 +76,36 @@ const contentModel = {
   },
 
   // Events
-  async createEvent({ title, description, event_date, location, created_by }) {
+  async createEvent({ title, description, event_start_date, event_end_date, location, created_by, picture }) {
     const [result] = await db.query(
-      "INSERT INTO events (title, description, event_date, location, created_by) VALUES (?, ?, ?, ?, ?)",
-      [title, description, event_date, location, created_by]
+      "INSERT INTO events (title, description, event_start_date, event_end_date, location, created_by, picture) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [title, description, event_start_date, event_end_date, location, created_by, picture]
     );
     return result.insertId;
   },
 
-  async getAllEvents() {
-    const [rows] = await db.query("SELECT * FROM events");
-    return rows;
+  async getAllEventsPaginated({ limit, offset }) {
+    const [[{ total }]] = await db.query("SELECT COUNT(*) as total FROM events");
+    const [rows] = await db.query("SELECT id, title, description, event_start_date, event_end_date, location, picture, created_at FROM events ORDER BY event_start_date DESC LIMIT ? OFFSET ?", [limit, offset]);
+    return { total, rows };
   },
 
   async getEventById(id) {
-    const [rows] = await db.query("SELECT * FROM events WHERE id = ?", [id]);
+    const [rows] = await db.query("SELECT id, title, description, event_start_date, event_end_date, location, picture, created_at FROM events WHERE id = ?", [id]);
     return rows[0];
   },
 
-  async updateEvent(id, { title, description, event_date, location }) {
-    await db.query(
-      "UPDATE events SET title = ?, description = ?, event_date = ?, location = ?, updated_at = NOW() WHERE id = ?",
-      [title, description, event_date, location, id]
-    );
+  async updateEvent(id, data) {
+    const fields = Object.keys(data);
+    const values = Object.values(data);
+
+    if (fields.length === 0) {
+      return this.getEventById(id);
+    }
+
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    const query = `UPDATE events SET ${setClause}, updated_at = NOW() WHERE id = ?`;
+    await db.query(query, [...values, id]);
     return await this.getEventById(id);
   },
 

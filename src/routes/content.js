@@ -15,8 +15,10 @@ const validateNews = [
 const validateEvent = [
   body("title").isString().isLength({ min: 1 }).withMessage("Title is required"),
   body("description").isString().isLength({ min: 1 }).withMessage("Description is required"),
-  body("event_date").isISO8601().withMessage("Event date must be a valid ISO 8601 date"),
+  body("event_start_date").isISO8601().withMessage("Event start date must be a valid ISO 8601 date"),
+  body("event_end_date").optional({ checkFalsy: true }).isISO8601().withMessage("Event end date must be a valid ISO 8601 date"),
   body("location").isString().isLength({ min: 1 }).withMessage("Location is required"),
+  body("picture").optional().isURL().withMessage("Picture must be a valid URL"),
 ];
 
 const validateGalleryMedia = [
