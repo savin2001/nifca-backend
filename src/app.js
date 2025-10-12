@@ -4,13 +4,14 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const session = require("express-session");
-const MySQLStore = require("express-mysql-session")(session);
-const db = require("./config/db");
+const sessionStore = require("./config/sessionStore"); // Use shared store
 const authRoutes = require("./routes/auth");
+const sessionStore = require("./config/sessionStore"); //shared session storage
 const clientAuthRoutes = require("./routes/clientAuth");
 const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
+<<<<<<< HEAD
 const applicationRoutes = require("./routes/application"); // New
 const clientApplicationRoutes = require("./routes/clientApplication"); // New
 const path = require('path');
@@ -39,6 +40,13 @@ const sessionStore = new MySQLStore({
   expiration: 86400000,
 }, db);
 
+=======
+const applicationRoutes = require("./routes/application");
+const clientApplicationRoutes = require("./routes/clientApplication");
+
+const app = express();
+
+>>>>>>> 693028fd1f1e7f44ccea0dcf05eec9fc89335095
 // Apply session middleware only to client routes
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/client')) {
@@ -66,9 +74,9 @@ app.use(bodyParser.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
-app.use("/api/applications", applicationRoutes); // New
-app.use("/api/client/applications", clientApplicationRoutes); // New
+app.use("/api/applications", applicationRoutes);
+app.use("/api/client/applications", clientApplicationRoutes);
+app.use("/api/client", clientRoutes);
 
 module.exports = app;

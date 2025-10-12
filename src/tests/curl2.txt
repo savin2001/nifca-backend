@@ -235,4 +235,15 @@ curl -X POST http://localhost:3000/api/auth/login \
 POST /api/client/login   - create clientss login
 curl -X POST http://localhost:3000/api/client/auth/login \
 -H "Content-Type: application/json" \
+-c cookies.txt \
 -d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
+
+POST /api/client/applications - clients create application
+ curl -X POST http://localhost:3000/api/client/applications \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{"title":"Funding Request","description":"Requesting funding for a community project."}'
+
+GET /api/client/applications - clients to view their own apllications
+curl -X GET http://localhost:3000/api/client/applications \
+-b cookies.txt
