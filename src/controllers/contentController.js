@@ -5,6 +5,7 @@ const { validationResult } = require("express-validator");
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const socialMediaService = require('../services/socialMediaService');
 
 async function downloadImage(url, newsId) {
   if (!url) return null;
@@ -41,7 +42,7 @@ const contentController = {
   // News
   async createNews(req, res) {
     const userId = req.user.userId;
-    const { title, content, picture: pictureUrl } = req.body;
+    const { title, content, picture: pictureUrl, post_to_twitter, post_to_linkedin } = req.body;
     const uploadedFile = req.file;
 
     try {
@@ -73,7 +74,26 @@ const contentController = {
         }
       }
 
-      res.status(201).json({ message: "News created successfully", newsId, picture: picturePath });
+      // Social media posting (async, non-blocking)
+      let socialMediaResults = null;
+      if (post_to_twitter || post_to_linkedin) {
+        const newsData = await contentModel.getNewsById(newsId);
+        socialMediaService.postToSocialMedia('news', newsData, {
+          twitter: post_to_twitter === true || post_to_twitter === 'true',
+          linkedin: post_to_linkedin === true || post_to_linkedin === 'true'
+        }).then(results => {
+          console.log('Social media posting results:', results);
+        }).catch(err => {
+          console.error('Social media posting error:', err);
+        });
+      }
+
+      res.status(201).json({
+        message: "News created successfully",
+        newsId,
+        picture: picturePath,
+        socialMediaQueued: !!(post_to_twitter || post_to_linkedin)
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating news" });
@@ -196,7 +216,7 @@ const contentController = {
     }
 
     const userId = req.user.userId;
-    const { title, content } = req.body;
+    const { title, content, post_to_twitter, post_to_linkedin } = req.body;
 
     try {
       const user = await userModel.findById(userId);
@@ -205,7 +225,25 @@ const contentController = {
       }
 
       const pressReleaseId = await contentModel.createPressRelease({ title, content, created_by: userId });
-      res.status(201).json({ message: "Press release created successfully", pressReleaseId });
+
+      // Social media posting (async, non-blocking)
+      if (post_to_twitter || post_to_linkedin) {
+        const pressReleaseData = await contentModel.getPressReleaseById(pressReleaseId);
+        socialMediaService.postToSocialMedia('press_release', pressReleaseData, {
+          twitter: post_to_twitter === true || post_to_twitter === 'true',
+          linkedin: post_to_linkedin === true || post_to_linkedin === 'true'
+        }).then(results => {
+          console.log('Social media posting results:', results);
+        }).catch(err => {
+          console.error('Social media posting error:', err);
+        });
+      }
+
+      res.status(201).json({
+        message: "Press release created successfully",
+        pressReleaseId,
+        socialMediaQueued: !!(post_to_twitter || post_to_linkedin)
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating press release" });
@@ -311,7 +349,7 @@ const contentController = {
   // Events
   async createEvent(req, res) {
     const userId = req.user.userId;
-    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
+    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl, post_to_twitter, post_to_linkedin } = req.body;
     const uploadedFile = req.file;
 
     try {
@@ -343,7 +381,25 @@ const contentController = {
         }
       }
 
-      res.status(201).json({ message: "Event created successfully", eventId, picture: picturePath });
+      // Social media posting (async, non-blocking)
+      if (post_to_twitter || post_to_linkedin) {
+        const eventData = await contentModel.getEventById(eventId);
+        socialMediaService.postToSocialMedia('event', eventData, {
+          twitter: post_to_twitter === true || post_to_twitter === 'true',
+          linkedin: post_to_linkedin === true || post_to_linkedin === 'true'
+        }).then(results => {
+          console.log('Social media posting results:', results);
+        }).catch(err => {
+          console.error('Social media posting error:', err);
+        });
+      }
+
+      res.status(201).json({
+        message: "Event created successfully",
+        eventId,
+        picture: picturePath,
+        socialMediaQueued: !!(post_to_twitter || post_to_linkedin)
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating event" });

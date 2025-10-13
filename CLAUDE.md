@@ -106,8 +106,22 @@ This system has **two separate authentication architectures** that must not be c
 ### Static Assets
 
 - News images stored in `src/assets/news/`
+- Event images stored in `src/assets/events/`
+- Gallery media stored in `src/assets/gallery/`
 - Served via `/assets` route configured in `src/app.js`
 - NIFCA logo at `src/assets/nifca.png` used in emails
+
+### Social Media Integration (Optional)
+
+- **Optional feature** - disabled by default with zero performance impact
+- Supports automatic posting to Twitter/X and LinkedIn
+- Service: `src/services/socialMediaService.js`
+- Non-blocking async posting - doesn't slow down content creation
+- Optional parameters on content creation: `post_to_twitter`, `post_to_linkedin`
+- See `SOCIAL_MEDIA_SETUP.md` for detailed setup instructions
+- Environment variables (only needed if enabled):
+  - `TWITTER_ENABLED`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET`
+  - `LINKEDIN_ENABLED`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN`
 
 ## Important Implementation Details
 
@@ -184,20 +198,40 @@ All content routes under `/api/content/*` and protected by `authMiddleware`.
 
 Required in `.env` file:
 ```
+# Server Configuration
 PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+
+# Database Configuration
 DB_HOST=localhost
 DB_USER=root
 DB_PASS=password
 DB_NAME=nifca
+
+# Authentication
 JWT_SECRET=your-jwt-secret
 SESSION_SECRET=your-session-secret
-FRONTEND_URL=http://localhost:5173
+
+# Email Configuration
 EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
 EMAIL_SECURE=false
 EMAIL_USER=noreply@example.com
 EMAIL_PASS=email-password
-NODE_ENV=development
+
+# Social Media (Optional - disabled by default)
+TWITTER_ENABLED=false
+LINKEDIN_ENABLED=false
+# Only add these if enabling Twitter:
+# TWITTER_API_KEY=your_key
+# TWITTER_API_SECRET=your_secret
+# TWITTER_ACCESS_TOKEN=your_token
+# TWITTER_ACCESS_SECRET=your_token_secret
+# Only add these if enabling LinkedIn:
+# LINKEDIN_CLIENT_ID=your_client_id
+# LINKEDIN_CLIENT_SECRET=your_client_secret
+# LINKEDIN_ACCESS_TOKEN=your_access_token
 ```
 
 ## Common Development Patterns
