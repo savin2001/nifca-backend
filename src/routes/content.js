@@ -39,9 +39,16 @@ const validateEventFormData = [
   body("location").isString().isLength({ min: 1 }).withMessage("Location is required"),
 ];
 
-const validateGalleryMedia = [
+// Validation for JSON-based gallery (with URL)
+const validateGalleryJSON = [
   body("type").isIn(["picture", "video"]).withMessage("Type must be 'picture' or 'video'"),
   body("url").isString().isLength({ min: 1 }).withMessage("URL is required"),
+  body("caption").optional().isString(),
+];
+
+// Validation for form-data gallery (with file upload)
+const validateGalleryFormData = [
+  body("type").isIn(["picture", "video"]).withMessage("Type must be 'picture' or 'video'"),
   body("caption").optional().isString(),
 ];
 

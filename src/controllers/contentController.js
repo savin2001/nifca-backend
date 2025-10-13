@@ -490,9 +490,20 @@ const contentController = {
   },
 
   async getAllGalleryMedia(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     try {
-      const media = await contentModel.getAllGalleryMedia();
-      res.status(200).json(media);
+      const { total, rows: media } = await contentModel.getAllGalleryMediaPaginated({ limit, offset });
+      res.status(200).json({
+        media,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while retrieving gallery media" });
@@ -516,14 +527,10 @@ const contentController = {
   },
 
   async updateGalleryMedia(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const userId = req.user.userId;
     const mediaId = parseInt(req.params.id);
     const { type, url, caption } = req.body;
+    const uploadedFile = req.file;
 
     try {
       const user = await userModel.findById(userId);
@@ -536,7 +543,18 @@ const contentController = {
         return res.status(404).json({ error: "Gallery media not found" });
       }
 
-      const updatedMedia = await contentModel.updateGalleryMedia(mediaId, { type, url, caption });
+      let mediaUrl = media.url;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        mediaUrl = `/assets/gallery/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (url) {
+        mediaUrl = url;
+      }
+
+      const updatedMedia = await contentModel.updateGalleryMedia(mediaId, { type, url: mediaUrl, caption });
       res.status(200).json({ message: "Gallery media updated successfully", media: updatedMedia });
     } catch (error) {
       console.error(error);

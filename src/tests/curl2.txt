@@ -202,21 +202,59 @@ curl -X DELETE http://localhost:3000/api/content/events/3 \
 
 -----------------------------GALLERY
 POST /api/content/gallery - to add gallery items
+
+Method 1: Using URL (JSON)
 curl -X POST http://localhost:3000/api/content/gallery \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer {{contentAdminToken}}" \
--d '{"type":"picture","url":"https://example.com/picture.jpg","caption":"Event photo from the Annual Gala"}'
+-d '{
+  "type":"picture",
+  "url":"https://example.com/picture.jpg",
+  "caption":"Event photo from the Annual Gala"
+}'
 
-GET /api/content/gallery - get all gallery items
-curl -X GET http://localhost:3000/api/content/gallery
+Method 2: Using File Upload (multipart/form-data)
+curl -X POST http://localhost:3000/api/content/gallery \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "type=picture" \
+-F "caption=Gallery photo from event" \
+-F "mediaFile=@/path/to/photo.jpg"
 
-PUT /api/content/gallery/{{media_id}}
-curl -X PUT http://localhost:3000/api/content/gallery/2 
--H "Content-Type: application/json" 
--H "Authorization: Bearer {{contentAdminToken}}" 
--d '{"type":"video","url":"https://example.com/video.mp4","caption":"Main video from the Annual Gala"}'
+Note: When both mediaFile and url are provided, mediaFile takes priority.
+Allowed formats: jpeg, jpg, png, gif, webp (max 10MB)
 
-DELETE /api/content/events/{{media_id}} - delete media
+GET /api/content/gallery - get all gallery items with pagination
+curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
+
+GET Fetch page 1 (10 items - default):
+curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
+
+GET Fetch page 2 (next 10 items):
+curl -X GET http://localhost:3000/api/content/gallery?page=2&limit=10
+
+GET /api/content/gallery/{{media_id}} - get a single gallery item by ID
+curl -X GET http://localhost:3000/api/content/gallery/2
+
+PUT /api/content/gallery/{{media_id}} - update gallery item
+
+Method 1: Update with URL (JSON)
+curl -X PUT http://localhost:3000/api/content/gallery/2 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "type":"video",
+  "url":"https://example.com/video.mp4",
+  "caption":"Updated video from the Annual Gala"
+}'
+
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/gallery/2 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "type=picture" \
+-F "caption=Updated photo with new file" \
+-F "mediaFile=@/path/to/new-photo.jpg"
+
+DELETE /api/content/gallery/{{media_id}} - delete gallery media
 curl -X DELETE http://localhost:3000/api/content/gallery/3 \
 -H "Authorization: Bearer {{contentAdminToken}}"
 

@@ -123,8 +123,14 @@ const contentModel = {
   },
 
   async getAllGalleryMedia() {
-    const [rows] = await db.query("SELECT * FROM gallery_media");
+    const [rows] = await db.query("SELECT * FROM gallery_media ORDER BY created_at DESC");
     return rows;
+  },
+
+  async getAllGalleryMediaPaginated({ limit, offset }) {
+    const [[{ total }]] = await db.query("SELECT COUNT(*) as total FROM gallery_media");
+    const [rows] = await db.query("SELECT id, type, url, caption, created_at FROM gallery_media ORDER BY created_at DESC LIMIT ? OFFSET ?", [limit, offset]);
+    return { total, rows };
   },
 
   async getGalleryMediaById(id) {
