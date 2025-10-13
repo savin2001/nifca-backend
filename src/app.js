@@ -7,13 +7,34 @@ const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
 const db = require("./config/db");
 const authRoutes = require("./routes/auth");
-const clientAuthRoutes = require("./routes/clientAuth"); // New client auth routes
+const clientAuthRoutes = require("./routes/clientAuth");
+const contentRoutes = require("./routes/content");
 const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
+const applicationRoutes = require("./routes/application"); // New
+const clientApplicationRoutes = require("./routes/clientApplication"); // New
+const path = require('path');
 
 const app = express();
 
-// Session store configuration
+
+// Secure CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true,
+}));
+
+// Serve static files from the assets directory
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
+// Also ensure events directory exists
+const fs = require('fs');
+const eventsDir = path.join(__dirname, 'assets/events');
+if (!fs.existsSync(eventsDir)) {
+  fs.mkdirSync(eventsDir, { recursive: true });
+}
+
+// Session store configuration for clients
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 3306,
@@ -21,34 +42,40 @@ const sessionStore = new MySQLStore({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   clearExpired: true,
-  checkExpirationInterval: 900000, // Check for expired sessions every 15 minutes
-  expiration: 86400000, // Sessions expire after 24 hours
+  checkExpirationInterval: 900000,
+  expiration: 86400000,
 }, db);
 
-// Session middleware for clients
-app.use(
-  session({
-    key: "client_session",
-    secret: process.env.SESSION_SECRET || "your-session-secret",
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Set to true in production with HTTPS
-    },
-  })
-);
+// Apply session middleware only to client routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/client')) {
+    session({
+      key: "client_session",
+      secret: process.env.SESSION_SECRET || "your-session-secret",
+      store: sessionStore,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      },
+    })(req, res, next);
+  } else {
+    next();
+  }
+});
 
-// Other middleware
-app.use(cors());
+
 app.use(bodyParser.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/client/auth", clientAuthRoutes); // New client auth routes
+app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/client", clientRoutes);
+app.use("/api/content", contentRoutes);
+app.use("/api/applications", applicationRoutes); // New
+app.use("/api/client/applications", clientApplicationRoutes); // New
 
 module.exports = app;

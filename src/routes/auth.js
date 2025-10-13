@@ -13,7 +13,7 @@ const validateRegistration = [
   body("email").isEmail().withMessage("Invalid email format"),
   body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
   body("role_id").isInt().withMessage("Role ID must be an integer"),
-  body("company_id").isInt().withMessage("Company ID must be an integer"),
+  body("company_id").optional().isInt().withMessage("Company ID must be an integer"),
 ];
 
 const validatePasswordChange = [

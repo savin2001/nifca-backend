@@ -33,17 +33,17 @@ curl -X POST http://localhost:3000/api/auth/change-password \
 
 # Fetch all users
 curl -X GET http://localhost:3000/api/users \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
 
 # Fetch single user
 curl -X GET http://localhost:3000/api/users/15 \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
 
 
 # Modify user
 curl -X PUT http://localhost:3000/api/users/24 \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
      -d '{
            "username": "testuser4",
            "email": "allenpane399@gmail.com",
@@ -53,22 +53,22 @@ curl -X PUT http://localhost:3000/api/users/24 \
 
 # Enable user
 curl -X PATCH http://localhost:3000/api/users/24/enable \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
 
 # Disable user
 curl -X PATCH http://localhost:3000/api/users/24/disable \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
 
 # Password reset
 curl -X PATCH http://localhost:3000/api/users/24/reset-password \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
      -d '{
            "newPassword": "newSecurePassword123"
          }'
 
 # Delete user
 curl -X DELETE http://localhost:3000/api/users/24 \
-     -H "Authorization: Bearer{{admin_token}}" \
+     -H "Authorization: Bearer {{user_token}}" \
 
 

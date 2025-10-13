@@ -20,7 +20,7 @@ transporter.verify((error, success) => {
   }
 });
 
-const sendVerificationEmail = async (email, token, userType = "client") => {
+const sendVerificationEmail = async (email, token, userType = "client", password) => {
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const verificationPath = userType === "admin" ? "/api/auth/verify" : "/api/client/auth/verify";
   const verificationLink = `${baseUrl}${verificationPath}?token=${token}`;
@@ -45,6 +45,12 @@ const sendVerificationEmail = async (email, token, userType = "client") => {
             Verify Email
           </a>
         </div>
+        <p style="color: #205473; font-size: 16px; text-align: center;">
+          After verification, you can log in using your email ${email}
+        </p>
+        <p style="color: #205473; font-size: 16px; text-align: center;">
+          First time password: ${password}
+        </p>
         <p style="color: #205473; font-size: 14px; text-align: center;">
           If you did not sign up for a NIFCA account, please ignore this email.
         </p>

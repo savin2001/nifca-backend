@@ -3,180 +3,213 @@ const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
-class UserModel {
-  // Find user by email
+const userModel = {
   async findByEmail(email) {
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-    return users[0];
-  }
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL", [email]);
+    return rows[0];
+  },
 
-  // Find user by ID
   async findById(id) {
-    const [users] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
-    return users[0];
-  }
-
-  // Find user by verification token
+    const [rows] = await db.query("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", [id]);
+    return rows[0];
+  },
+  async isTokenValid(userId, token) {
+    const [rows] = await db.query(
+      "SELECT * FROM user_tokens WHERE user_id = ? AND token = ? AND expires_at > NOW()",
+      [userId, token]
+    );
+    return rows.length > 0;
+  },
   async findByVerificationToken(token) {
-    const [users] = await db.query("SELECT * FROM users WHERE verification_token = ?", [token]);
-    return users[0];
-  }
+    const [rows] = await db.query("SELECT * FROM users WHERE verification_token = ? AND deleted_at IS NULL", [token]);
+    return rows[0];
+  },
 
-  // Create a new user
+  
+
   async create({ username, email, password, role_id, company_id, created_by }) {
-    const passwordHash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const [result] = await db.query(
-      `INSERT INTO users (
-        username, email, password_hash, role_id, company_id, 
-        verification_token, status, created_by, enabled, failed_attempts
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        username,
-        email,
-        passwordHash,
-        role_id,
-        company_id,
-        verificationToken,
-        "inactive",
-        created_by,
-        0,
-        0,
-      ]
+      "INSERT INTO users (username, email, password_hash, role_id, company_id, created_by, verification_token, status, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, 'inactive', 0)",
+      [username, email, hashedPassword, role_id, company_id, created_by, verificationToken]
     );
-    return { id: result.insertId, email, verificationToken };
-  }
+    const userId = result.insertId;
 
-  // Get all users
-  async getAll() {
-    const [users] = await db.query(
-      `SELECT id, username, email, role_id, status, enabled, 
-              failed_attempts, last_login, company_id, created_by 
-       FROM users`
-    );
-    return users;
-  }
-
-  // Update user details
-  async update(id, { username, email, role_id, company_id }) {
+    // Log the creation action
     await db.query(
-      `UPDATE users 
-       SET username = ?, email = ?, role_id = ?, company_id = ? 
-       WHERE id = ?`,
-      [username, email, role_id, company_id, id]
+      "INSERT INTO user_audit_log (user_id, action, performed_by, new_data) VALUES (?, 'create', ?, ?)",
+      [userId, created_by, JSON.stringify({ username, email, role_id, company_id })]
     );
-    return this.findById(id);
-  }
 
-  // Soft delete user
-  async softDelete(id) {
-    await db.query("UPDATE users SET status = 'inactive' WHERE id = ?", [id]);
-  }
+    return { id: userId, verificationToken };
+  },
 
-  // Enable/disable user
-  async setEnabled(id, enabled) {
-    await db.query("UPDATE users SET enabled = ? WHERE id = ?", [enabled, id]);
-  }
-
-  // Update password
-  async updatePassword(id, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query(
-      `UPDATE users 
-       SET password_hash = ?, enabled = TRUE, status = 'active' 
-       WHERE id = ?`,
-      [hashedPassword, id]
-    );
-  }
-
-  // Update role
-  async updateRole(id, role_id) {
-    await db.query("UPDATE users SET role_id = ? WHERE id = ?", [role_id, id]);
-  }
-
-  // Store token in user_tokens table
-  async storeToken(userId, token, expiresAt) {
-    await db.query(
-      `INSERT INTO user_tokens (user_id, token, expires_at) 
-       VALUES (?, ?, ?)`,
-      [userId, token, expiresAt]
-    );
-  }
-
-  // Check if a token is valid
-  async isTokenValid(userId, token) {
-    const [tokens] = await db.query(
-      `SELECT * FROM user_tokens 
-       WHERE user_id = ? AND token = ? AND expires_at > NOW()`,
-      [userId, token]
-    );
-    return tokens.length > 0;
-  }
-
-  // Remove a specific token (logout)
-  async removeToken(userId, token) {
-    await db.query(
-      `DELETE FROM user_tokens 
-       WHERE user_id = ? AND token = ?`,
-      [userId, token]
-    );
-  }
-
-  // Remove all tokens for a user (force logout or password reset)
-  async removeAllTokens(userId) {
-    await db.query(
-      `DELETE FROM user_tokens 
-       WHERE user_id = ?`,
-      [userId]
-    );
-  }
-
-  // Verify email
-  async verifyEmail(userId) {
-    await db.query(
-      `UPDATE users 
-       SET verified_at = NOW(), verification_token = NULL 
-       WHERE id = ?`,
-      [userId]
-    );
-  }
-
-  // Update failed attempts
-  async incrementFailedAttempts(id) {
-    await db.query(
-      `UPDATE users 
-       SET failed_attempts = failed_attempts + 1 
-       WHERE id = ?`,
-      [id]
-    );
-  }
-
-  // Reset failed attempts
-  async resetFailedAttempts(id) {
-    await db.query("UPDATE users SET failed_attempts = 0 WHERE id = ?", [id]);
-  }
-
-  // Update last login
-  async updateLastLogin(id) {
-    await db.query(
-      `UPDATE users 
-       SET last_login = NOW() 
-       WHERE id = ?`,
-      [id]
-    );
-  }
-
-  // Validate role exists
   async validateRole(role_id) {
-    const [roles] = await db.query("SELECT name FROM roles WHERE id = ?", [role_id]);
-    return roles[0];
-  }
+    const [rows] = await db.query("SELECT * FROM roles WHERE id = ?", [role_id]);
+    return rows[0];
+  },
 
-  // Validate company exists
   async validateCompany(company_id) {
-    const [companies] = await db.query("SELECT id FROM companies WHERE id = ?", [company_id]);
-    return companies[0];
-  }
-}
+    const [rows] = await db.query("SELECT * FROM companies WHERE id = ?", [company_id]);
+    return rows[0];
+  },
 
-module.exports = new UserModel();
+  async verifyEmail(userId) {
+    const user = await this.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    await db.query(
+      "UPDATE users SET verified_at = NOW(), verification_token = NULL, status = 'active' WHERE id = ?",
+      [userId]
+    );
+
+    // Log the verification action
+    await db.query(
+      "INSERT INTO user_audit_log (user_id, action, performed_by, old_data, new_data) VALUES (?, 'verify_email', ?, ?, ?)",
+      [userId, userId, JSON.stringify({ status: user.status }), JSON.stringify({ status: 'active' })]
+    );
+  },
+
+  async incrementFailedAttempts(userId) {
+    await db.query("UPDATE users SET failed_attempts = failed_attempts + 1 WHERE id = ?", [userId]);
+  },
+
+  async resetFailedAttempts(userId) {
+    await db.query("UPDATE users SET failed_attempts = 0 WHERE id = ?", [userId]);
+  },
+
+  async updateLastLogin(userId) {
+    await db.query("UPDATE users SET last_login = NOW() WHERE id = ?", [userId]);
+  },
+
+  async storeToken(userId, token, expiresAt) {
+    await db.query("INSERT INTO user_tokens (user_id, token, expires_at) VALUES (?, ?, ?)", [
+      userId,
+      token,
+      expiresAt,
+    ]);
+  },
+
+  async updatePassword(userId, newPassword, performedBy) {
+    const user = await this.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password_hash = ?, enabled = 1 WHERE id = ?", [
+      hashedPassword,
+      userId,
+    ]);
+
+    // Log the password reset action
+    await db.query(
+      "INSERT INTO user_audit_log (user_id, action, performed_by) VALUES (?, 'reset_password', ?)",
+      [userId, performedBy || userId]
+    );
+  },
+
+  async removeToken(userId, token) {
+    await db.query("DELETE FROM user_tokens WHERE user_id = ? AND token = ?", [userId, token]);
+  },
+
+  async removeAllTokens(userId) {
+    await db.query("DELETE FROM user_tokens WHERE user_id = ?", [userId]);
+  },
+
+  // Updated methods for user management
+  async getAllUsers() {
+    const [rows] = await db.query(
+      "SELECT id, username, email, role_id, company_id, status, enabled, created_at, updated_at FROM users WHERE deleted_at IS NULL"
+    );
+    return rows;
+  },
+
+  async updateUser(userId, updates, performedBy) {
+    const { username, email, role_id, company_id, status, enabled } = updates;
+    const user = await this.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    // Validate role_id and company_id if provided
+    if (role_id) {
+      const role = await this.validateRole(role_id);
+      if (!role) throw new Error("Invalid role ID");
+    }
+    if (company_id) {
+      const company = await this.validateCompany(company_id);
+      if (!company) throw new Error("Invalid company ID");
+    }
+
+    const oldData = {
+      username: user.username,
+      email: user.email,
+      role_id: user.role_id,
+      company_id: user.company_id,
+      status: user.status,
+      enabled: user.enabled,
+    };
+
+    await db.query(
+      "UPDATE users SET username = ?, email = ?, role_id = ?, company_id = ?, status = ?, enabled = ?, updated_at = NOW() WHERE id = ?",
+      [username || user.username, email || user.email, role_id || user.role_id, company_id || user.company_id, status || user.status, enabled !== undefined ? enabled : user.enabled, userId]
+    );
+
+    const updatedUser = await this.findById(userId);
+
+    // Log the update action
+    await db.query(
+      "INSERT INTO user_audit_log (user_id, action, performed_by, old_data, new_data) VALUES (?, 'update', ?, ?, ?)",
+      [userId, performedBy, JSON.stringify(oldData), JSON.stringify(updates)]
+    );
+
+    return updatedUser;
+  },
+
+  async setEnabled(userId, enabled, performedBy) {
+    const user = await this.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    await db.query("UPDATE users SET enabled = ?, updated_at = NOW() WHERE id = ?", [enabled ? 1 : 0, userId]);
+
+    // Log the enable/disable action
+    await db.query(
+      "INSERT INTO user_audit_log (user_id, action, performed_by, old_data, new_data) VALUES (?, ?, ?, ?, ?)",
+      [userId, enabled ? 'enable' : 'disable', performedBy, JSON.stringify({ enabled: user.enabled }), JSON.stringify({ enabled })]
+    );
+  },
+
+  async softDelete(userId, performedBy) {
+    const user = await this.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    await db.query("UPDATE users SET deleted_at = NOW() WHERE id = ?", [userId]);
+    await this.removeAllTokens(userId);
+
+    // Log the deletion action
+    await db.query(
+      "INSERT INTO user_audit_log (user_id, action, performed_by, old_data) VALUES (?, 'delete', ?, ?)",
+      [userId, performedBy, JSON.stringify(user)]
+    );
+  },
+
+  async hasDependencies(userId) {
+    // Check for content created by the user
+    const [content] = await db.query(
+      "SELECT COUNT(*) as count FROM news WHERE created_by = ? UNION ALL " +
+      "SELECT COUNT(*) as count FROM press_releases WHERE created_by = ? UNION ALL " +
+      "SELECT COUNT(*) as count FROM events WHERE created_by = ? UNION ALL " +
+      "SELECT COUNT(*) as count FROM gallery_media WHERE created_by = ?",
+      [userId, userId, userId, userId]
+    );
+    const contentCount = content.reduce((sum, row) => sum + row.count, 0);
+
+    // Check for applications reviewed by the user
+    const [applications] = await db.query(
+      "SELECT COUNT(*) as count FROM applications WHERE reviewed_by = ?",
+      [userId]
+    );
+
+    return contentCount > 0 || applications[0].count > 0;
+  },
+};
+
+module.exports = userModel;

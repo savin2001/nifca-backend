@@ -1,28 +1,79 @@
 // src/controllers/contentController.js
-const newsModel = require("../models/newsModel");
-const pressReleaseModel = require("../models/pressReleaseModel");
-const eventModel = require("../models/eventModel");
-const galleryModel = require("../models/galleryModel");
+const contentModel = require("../models/contentModel");
+const userModel = require("../models/userModel");
 const { validationResult } = require("express-validator");
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+async function downloadImage(url, newsId) {
+  if (!url) return null;
+  try {
+    const response = await axios({ 
+      url, 
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+      }
+    });
+    const assetsDir = path.join(__dirname, '../assets/news');
+    if (!fs.existsSync(assetsDir)) {
+      fs.mkdirSync(assetsDir, { recursive: true });
+    }
+    const randomString = Math.random().toString(36).substring(2, 7);
+    const extension = path.extname(new URL(url).pathname);
+    const filename = `nifca_news_${randomString}_${newsId}${extension}`;
+    const imagePath = path.join(assetsDir, filename);
+    const writer = fs.createWriteStream(imagePath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => resolve(`/assets/news/${filename}`));
+      writer.on('error', reject);
+    });
+  } catch (error) {
+    console.error('Error downloading image:', error);
+    return null;
+  }
+}
 
 const contentController = {
-  // News Operations
+  // News
   async createNews(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { title, content } = req.body;
     const userId = req.user.userId;
+    const { title, content, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can create news." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can create news." });
       }
 
-      const news = await newsModel.create({ title, content, created_by: userId });
-      res.status(201).json({ message: "News created successfully", news });
+      // Validate required fields
+      if (!title || !content) {
+        return res.status(400).json({ error: "Title and content are required" });
+      }
+
+      // Create news article first to get the newsId
+      const newsId = await contentModel.createNews({ title, content, created_by: userId, picture: null });
+
+      let picturePath = null;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/news/${uploadedFile.filename}`;
+        await contentModel.updateNews(newsId, { picture: picturePath });
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, newsId);
+        if (picturePath) {
+          await contentModel.updateNews(newsId, { picture: picturePath });
+        }
+      }
+
+      res.status(201).json({ message: "News created successfully", newsId, picture: picturePath });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating news" });
@@ -30,58 +81,83 @@ const contentController = {
   },
 
   async getAllNews(req, res) {
-    try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view news." });
-      }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
 
-      const news = await newsModel.findAll();
-      res.status(200).json(news);
+    try {
+      const { total, rows: news } = await contentModel.getAllNewsPaginated({ limit, offset });
+      
+      const formattedNews = news.map(item => ({
+        ...item,
+        date: new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(item.created_at)),
+        body: item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content,
+      }));
+
+      res.status(200).json({
+        news: formattedNews,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching news" });
+      res.status(500).json({ error: "Server error while retrieving news" });
     }
   },
 
+  // New method: Get News by ID
   async getNewsById(req, res) {
-    const newsId = req.params.id;
+    const newsId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view news." });
-      }
-
-      const news = await newsModel.findById(newsId);
+      const news = await contentModel.getNewsById(newsId);
       if (!news) {
         return res.status(404).json({ error: "News not found" });
       }
       res.status(200).json(news);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching news" });
+      res.status(500).json({ error: "Server error while retrieving news" });
     }
   },
+
+
 
   async updateNews(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const newsId = req.params.id;
-    const { title, content } = req.body;
+    const userId = req.user.userId;
+    const newsId = parseInt(req.params.id);
+    const { title, content, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can update news." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can update news." });
       }
 
-      const news = await newsModel.findById(newsId);
+      const news = await contentModel.getNewsById(newsId);
       if (!news) {
         return res.status(404).json({ error: "News not found" });
       }
 
-      const updatedNews = await newsModel.update(newsId, { title, content });
+      let picturePath = news.picture;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/news/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        const downloadedPath = await downloadImage(pictureUrl, newsId);
+        if (downloadedPath) {
+          picturePath = downloadedPath;
+        }
+      }
+
+      const updatedNews = await contentModel.updateNews(newsId, { title, content, picture: picturePath });
       res.status(200).json({ message: "News updated successfully", news: updatedNews });
     } catch (error) {
       console.error(error);
@@ -90,19 +166,21 @@ const contentController = {
   },
 
   async deleteNews(req, res) {
-    const newsId = req.params.id;
+    const userId = req.user.userId;
+    const newsId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can delete news." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can delete news." });
       }
 
-      const news = await newsModel.findById(newsId);
+      const news = await contentModel.getNewsById(newsId);
       if (!news) {
         return res.status(404).json({ error: "News not found" });
       }
 
-      await newsModel.delete(newsId);
+      await contentModel.deleteNews(newsId);
       res.status(200).json({ message: "News deleted successfully" });
     } catch (error) {
       console.error(error);
@@ -110,28 +188,24 @@ const contentController = {
     }
   },
 
-  // Press Release Operations
+  // Press Releases
   async createPressRelease(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { title, content, release_date } = req.body;
     const userId = req.user.userId;
+    const { title, content } = req.body;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can create press releases." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can create press releases." });
       }
 
-      const pressRelease = await pressReleaseModel.create({
-        title,
-        content,
-        release_date,
-        created_by: userId,
-      });
-      res.status(201).json({ message: "Press release created successfully", pressRelease });
+      const pressReleaseId = await contentModel.createPressRelease({ title, content, created_by: userId });
+      res.status(201).json({ message: "Press release created successfully", pressReleaseId });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating press release" });
@@ -139,35 +213,46 @@ const contentController = {
   },
 
   async getAllPressReleases(req, res) {
-    try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view press releases." });
-      }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
 
-      const pressReleases = await pressReleaseModel.findAll();
-      res.status(200).json(pressReleases);
+    try {
+      const { total, rows: pressReleases } = await contentModel.getAllPressReleasesPaginated({ limit, offset });
+
+      const formattedPressReleases = pressReleases.map(item => ({
+        ...item,
+        date: new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(item.created_at)),
+        body: item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content,
+      }));
+
+      res.status(200).json({
+        pressReleases: formattedPressReleases,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching press releases" });
+      res.status(500).json({ error: "Server error while retrieving press releases" });
     }
   },
 
+  // New method: Get Press Release by ID
   async getPressReleaseById(req, res) {
-    const pressReleaseId = req.params.id;
+    const pressReleaseId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view press releases." });
-      }
-
-      const pressRelease = await pressReleaseModel.findById(pressReleaseId);
+      const pressRelease = await contentModel.getPressReleaseById(pressReleaseId);
       if (!pressRelease) {
         return res.status(404).json({ error: "Press release not found" });
       }
       res.status(200).json(pressRelease);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching press release" });
+      res.status(500).json({ error: "Server error while retrieving press release" });
     }
   },
 
@@ -177,24 +262,22 @@ const contentController = {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const pressReleaseId = req.params.id;
-    const { title, content, release_date } = req.body;
+    const userId = req.user.userId;
+    const pressReleaseId = parseInt(req.params.id);
+    const { title, content } = req.body;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can update press releases." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can update press releases." });
       }
 
-      const pressRelease = await pressReleaseModel.findById(pressReleaseId);
+      const pressRelease = await contentModel.getPressReleaseById(pressReleaseId);
       if (!pressRelease) {
         return res.status(404).json({ error: "Press release not found" });
       }
 
-      const updatedPressRelease = await pressReleaseModel.update(pressReleaseId, {
-        title,
-        content,
-        release_date,
-      });
+      const updatedPressRelease = await contentModel.updatePressRelease(pressReleaseId, { title, content });
       res.status(200).json({ message: "Press release updated successfully", pressRelease: updatedPressRelease });
     } catch (error) {
       console.error(error);
@@ -203,19 +286,21 @@ const contentController = {
   },
 
   async deletePressRelease(req, res) {
-    const pressReleaseId = req.params.id;
+    const userId = req.user.userId;
+    const pressReleaseId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can delete press releases." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can delete press releases." });
       }
 
-      const pressRelease = await pressReleaseModel.findById(pressReleaseId);
+      const pressRelease = await contentModel.getPressReleaseById(pressReleaseId);
       if (!pressRelease) {
         return res.status(404).json({ error: "Press release not found" });
       }
 
-      await pressReleaseModel.delete(pressReleaseId);
+      await contentModel.deletePressRelease(pressReleaseId);
       res.status(200).json({ message: "Press release deleted successfully" });
     } catch (error) {
       console.error(error);
@@ -223,29 +308,42 @@ const contentController = {
     }
   },
 
-  // Event Operations
+  // Events
   async createEvent(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { title, description, event_date, location } = req.body;
     const userId = req.user.userId;
+    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can create events." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can create events." });
       }
 
-      const event = await eventModel.create({
-        title,
-        description,
-        event_date,
-        location,
-        created_by: userId,
-      });
-      res.status(201).json({ message: "Event created successfully", event });
+      // Validate required fields
+      if (!title || !description || !event_start_date || !location) {
+        return res.status(400).json({ error: "Title, description, event_start_date, and location are required" });
+      }
+
+      // Create event first to get the ID
+      const eventId = await contentModel.createEvent({ title, description, event_start_date, event_end_date, location, created_by: userId, picture: null });
+
+      let picturePath = null;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/events/${uploadedFile.filename}`;
+        await contentModel.updateEvent(eventId, { picture: picturePath });
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        picturePath = await downloadImage(pictureUrl, eventId);
+        if (picturePath) {
+          await contentModel.updateEvent(eventId, { picture: picturePath });
+        }
+      }
+
+      res.status(201).json({ message: "Event created successfully", eventId, picture: picturePath });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating event" });
@@ -253,63 +351,76 @@ const contentController = {
   },
 
   async getAllEvents(req, res) {
-    try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view events." });
-      }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const offset = (page - 1) * limit;
 
-      const events = await eventModel.findAll();
-      res.status(200).json(events);
+    try {
+      const { total, rows: events } = await contentModel.getAllEventsPaginated({ limit, offset });
+      res.status(200).json({
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
+      });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching events" });
+      res.status(500).json({ error: "Server error while retrieving events" });
     }
   },
 
+  // New method: Get Event by ID
   async getEventById(req, res) {
-    const eventId = req.params.id;
+    const eventId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view events." });
-      }
-
-      const event = await eventModel.findById(eventId);
+      const event = await contentModel.getEventById(eventId);
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
       res.status(200).json(event);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching event" });
+      res.status(500).json({ error: "Server error while retrieving event" });
     }
   },
+  
 
   async updateEvent(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const eventId = req.params.id;
-    const { title, description, event_date, location } = req.body;
+    const userId = req.user.userId;
+    const eventId = parseInt(req.params.id);
+    const { title, description, event_start_date, event_end_date, location, picture: pictureUrl } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can update events." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can update events." });
       }
 
-      const event = await eventModel.findById(eventId);
+      const event = await contentModel.getEventById(eventId);
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
 
-      const updatedEvent = await eventModel.update(eventId, {
-        title,
-        description,
-        event_date,
-        location,
-      });
+      let picturePath = event.picture;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        picturePath = `/assets/events/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (pictureUrl) {
+        const downloadedPath = await downloadImage(pictureUrl, eventId);
+        if (downloadedPath) {
+          picturePath = downloadedPath;
+        }
+      }
+
+      const updateData = { title, description, event_start_date, event_end_date, location, picture: picturePath };
+      const updatedEvent = await contentModel.updateEvent(eventId, updateData);
       res.status(200).json({ message: "Event updated successfully", event: updatedEvent });
     } catch (error) {
       console.error(error);
@@ -318,19 +429,21 @@ const contentController = {
   },
 
   async deleteEvent(req, res) {
-    const eventId = req.params.id;
+    const userId = req.user.userId;
+    const eventId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can delete events." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can delete events." });
       }
 
-      const event = await eventModel.findById(eventId);
+      const event = await contentModel.getEventById(eventId);
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
 
-      await eventModel.delete(eventId);
+      await contentModel.deleteEvent(eventId);
       res.status(200).json({ message: "Event deleted successfully" });
     } catch (error) {
       console.error(error);
@@ -338,116 +451,137 @@ const contentController = {
     }
   },
 
-  // Gallery Operations
-  async createGalleryItem(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { media_type, url, caption } = req.body;
+  // Gallery Media
+  async createGalleryMedia(req, res) {
     const userId = req.user.userId;
+    const { type, url, caption } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can add gallery items." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can create gallery media." });
       }
 
-      const galleryItem = await galleryModel.create({
-        media_type,
-        url,
-        caption,
-        created_by: userId,
+      // Validate required fields
+      if (!type) {
+        return res.status(400).json({ error: "Type is required (picture or video)" });
+      }
+
+      if (!['picture', 'video'].includes(type)) {
+        return res.status(400).json({ error: "Type must be 'picture' or 'video'" });
+      }
+
+      let mediaUrl = url;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        mediaUrl = `/assets/gallery/${uploadedFile.filename}`;
+      } else if (!url) {
+        return res.status(400).json({ error: "Either mediaFile or url must be provided" });
+      }
+
+      const mediaId = await contentModel.createGalleryMedia({ type, url: mediaUrl, caption, created_by: userId });
+      res.status(201).json({ message: "Gallery media created successfully", mediaId, url: mediaUrl });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while creating gallery media" });
+    }
+  },
+
+  async getAllGalleryMedia(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+      const { total, rows: media } = await contentModel.getAllGalleryMediaPaginated({ limit, offset });
+      res.status(200).json({
+        media,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        }
       });
-      res.status(201).json({ message: "Gallery item created successfully", galleryItem });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while creating gallery item" });
+      res.status(500).json({ error: "Server error while retrieving gallery media" });
     }
   },
 
-  async getAllGalleryItems(req, res) {
-    try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view gallery items." });
-      }
+  // New method: Get Gallery Media by ID
+  async getGalleryMediaById(req, res) {
+    const mediaId = parseInt(req.params.id);
 
-      const galleryItems = await galleryModel.findAll();
-      res.status(200).json(galleryItems);
+    try {
+      const media = await contentModel.getGalleryMediaById(mediaId);
+      if (!media) {
+        return res.status(404).json({ error: "Gallery media not found" });
+      }
+      res.status(200).json(media);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching gallery items" });
+      res.status(500).json({ error: "Server error while retrieving gallery media" });
     }
   },
 
-  async getGalleryItemById(req, res) {
-    const galleryItemId = req.params.id;
+  async updateGalleryMedia(req, res) {
+    const userId = req.user.userId;
+    const mediaId = parseInt(req.params.id);
+    const { type, url, caption } = req.body;
+    const uploadedFile = req.file;
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can view gallery items." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can update gallery media." });
       }
 
-      const galleryItem = await galleryModel.findById(galleryItemId);
-      if (!galleryItem) {
-        return res.status(404).json({ error: "Gallery item not found" });
+      const media = await contentModel.getGalleryMediaById(mediaId);
+      if (!media) {
+        return res.status(404).json({ error: "Gallery media not found" });
       }
-      res.status(200).json(galleryItem);
+
+      let mediaUrl = media.url;
+
+      // Handle file upload (takes priority over URL)
+      if (uploadedFile) {
+        mediaUrl = `/assets/gallery/${uploadedFile.filename}`;
+      }
+      // Handle URL if no file was uploaded
+      else if (url) {
+        mediaUrl = url;
+      }
+
+      const updatedMedia = await contentModel.updateGalleryMedia(mediaId, { type, url: mediaUrl, caption });
+      res.status(200).json({ message: "Gallery media updated successfully", media: updatedMedia });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while fetching gallery item" });
+      res.status(500).json({ error: "Server error while updating gallery media" });
     }
   },
 
-  async updateGalleryItem(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const galleryItemId = req.params.id;
-    const { media_type, url, caption } = req.body;
+  async deleteGalleryMedia(req, res) {
+    const userId = req.user.userId;
+    const mediaId = parseInt(req.params.id);
 
     try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can update gallery items." });
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 2) {
+        return res.status(403).json({ error: "Only content admins can delete gallery media." });
       }
 
-      const galleryItem = await galleryModel.findById(galleryItemId);
-      if (!galleryItem) {
-        return res.status(404).json({ error: "Gallery item not found" });
+      const media = await contentModel.getGalleryMediaById(mediaId);
+      if (!media) {
+        return res.status(404).json({ error: "Gallery media not found" });
       }
 
-      const updatedGalleryItem = await galleryModel.update(galleryItemId, {
-        media_type,
-        url,
-        caption,
-      });
-      res.status(200).json({ message: "Gallery item updated successfully", galleryItem: updatedGalleryItem });
+      await contentModel.deleteGalleryMedia(mediaId);
+      res.status(200).json({ message: "Gallery media deleted successfully" });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Server error while updating gallery item" });
-    }
-  },
-
-  async deleteGalleryItem(req, res) {
-    const galleryItemId = req.params.id;
-
-    try {
-      if (req.user.role !== 2) {
-        return res.status(403).json({ error: "Only Content Admins can delete gallery items." });
-      }
-
-      const galleryItem = await galleryModel.findById(galleryItemId);
-      if (!galleryItem) {
-        return res.status(404).json({ error: "Gallery item not found" });
-      }
-
-      await galleryModel.delete(galleryItemId);
-      res.status(200).json({ message: "Gallery item deleted successfully" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error while deleting gallery item" });
+      res.status(500).json({ error: "Server error while deleting gallery media" });
     }
   },
 };
