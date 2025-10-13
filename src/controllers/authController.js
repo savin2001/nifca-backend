@@ -78,6 +78,121 @@ const authController = {
     }
   },
 
+  async getAllUsers(req, res) {
+    const adminId = req.user.userId;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can view all users." });
+      }
+
+      const users = await userModel.getAll();
+      // Filter out clients (role_id: 7)
+      const filteredUsers = users.filter(user => user.role_id !== 7);
+      res.status(200).json(filteredUsers);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching users" });
+    }
+  },
+
+  async getUserById(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can view user details." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be viewed through this endpoint. Use the client management endpoint." });
+      }
+
+      res.status(200).json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching user" });
+    }
+  },
+
+  async updateUser(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+    const { username, email, role_id, company_id, status, enabled } = req.body;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can update users." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be updated through this endpoint. Use the client management endpoint." });
+      }
+
+      const updatedUser = await userModel.update(userId, {
+        username: username || user.username,
+        email: email || user.email,
+        role_id: role_id || user.role_id,
+        company_id: company_id || user.company_id,
+      });
+
+      if (status) {
+        await userModel.softDelete(userId); // Updates status to 'inactive' if status is provided
+      }
+
+      if (enabled !== undefined) {
+        await userModel.setEnabled(userId, enabled);
+      }
+
+      const updatedUserDetails = await userModel.findById(userId);
+      res.status(200).json({ message: "User updated successfully", user: updatedUserDetails });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while updating user" });
+    }
+  },
+
+  async deleteUser(req, res) {
+    const adminId = req.user.userId;
+    const userId = req.params.id;
+
+    try {
+      const adminUser = await userModel.findById(adminId);
+      if (adminUser.role_id !== 1) {
+        return res.status(403).json({ error: "Only site admins can delete users." });
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.role_id === 7) {
+        return res.status(403).json({ error: "Clients cannot be deleted through this endpoint. Use the client management endpoint." });
+      }
+
+      await userModel.softDelete(userId);
+      res.status(200).json({ message: "User soft-deleted successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while deleting user" });
+    }
+  },
+
   async loginUser(req, res) {
     const { email, password } = req.body;
 

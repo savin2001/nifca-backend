@@ -5,6 +5,11 @@ curl -X POST http://localhost:3000/api/auth/register \
 -H "Authorization: Bearer {{siteAdminToken}}" \
 -d '{"username":"contentadmin","email":"allenpane399@gmail.com","password":"contentpass","role_id":2,"company_id":1}'
 
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"username":"contentadmin","email":"contentadmin@nifca.com","password":"contentpass","role_id":2,"company_id":1}'
+
 
 POST /api/auth/login - Login as an admin user (returns JWT token).
 curl -X POST http://localhost:3000/api/auth/login \
@@ -24,8 +29,8 @@ curl -X GET "http://localhost:3000/api/auth/verify?token={{verificationToken}}"
 POST /api/auth/change-password - Change an admin user’s password.
 curl -X POST http://localhost:3000/api/auth/change-password \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{adminToken}}" \
--d '{"oldPassword":"adminpassword","newPassword":"newadminpass"}'
+-H "Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MzI1MCwiZXhwIjoxNzQzMDg2ODUwfQ.lHShHRqc84F1wrTHf4V0rfqZJB8T9IGKHVVdHNScuas"" \
+-d '{"oldPassword":"adminpass","newPassword":"newadminpass"}'
 
 PATCH /api/users/{{user_id}}/disable - disable user
 curl -X PATCH http://localhost:3000/api/users/2/disable \
@@ -50,226 +55,17 @@ curl -X POST http://localhost:3000/api/auth/logout \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer {{adminToken}}"\
 
-===============================Content admin routes
-
--------------------------------NEWS
-POST /api/content/news - create a new news article
-
-Method 1: Using URL (JSON)
-curl -X POST http://localhost:3000/api/content/news \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title": "New Test Article Today",
-  "content": "This is the content of the new test article from today.",
-  "picture": "https://images.unsplash.com/photo-1759928222798-63e73f690563?q=80&w=1172&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-}'
-
-Method 2: Using File Upload (multipart/form-data)
-curl -X POST http://localhost:3000/api/content/news \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "title=Breaking News: File Upload Test" \
--F "content=This article was created using file upload instead of URL" \
--F "pictureFile=@/path/to/your/image.jpg"
-
-Note: When both pictureFile and picture are provided, pictureFile takes priority.
-Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
-
-
-GET /api/content/news - to get all news
-curl -X GET http://localhost:3000/api/content/news
-
-GET /api/content/news/ Fetch page 1 (4 articles):
-curl -X GET http://localhost:3000/api/content/news?page=1&limit=4
-
-GET Fetch page 2 (next 4 articles):
-curl -X GET http://localhost:3000/api/content/news?page=2&limit=4
-
-PUT /api/content/news/{{news_id}} - to update news article
-
-Method 1: Update with URL (JSON)
-curl -X PUT http://localhost:3000/api/content/news/10 \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title": "Updated Article Title 4",
-  "content": "This is the updated content of the article.",
-  "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
-}'
-
-Method 2: Update with File Upload (multipart/form-data)
-curl -X PUT http://localhost:3000/api/content/news/10 \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "title=Updated with New Image File" \
--F "content=This update includes a newly uploaded image" \
--F "pictureFile=@/path/to/updated-image.jpg"
-
-
-
-DELETE /api/content/news/{{news_id}}
-curl -X DELETE http://localhost:3000/api/content/news/1 \
--H "Authorization: Bearer {{contentAdminToken}}"
-
--------------------------------PRESS RELEASES
-POST /api/content/press-releases - create a new press release
-curl -X POST http://localhost:3000/api/content/press-releases \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title": "Official NIFCA Statement on New Regulations",
-  "content": "This is the official statement regarding the new 2025 fishing regulations."
-}'
-
-GET /api/content/press-releases - to get all press releases with pagination
-curl -X GET http://localhost:3000/api/content/press-releases?page=1&limit=4
-
-GET /api/content/press-releases/{{press_release_id}} - to get a single press release by ID
-curl -X GET http://localhost:3000/api/content/press-releases/1
-
-PUT /api/content/press-releases/{{press_release_id}} - to update a press release
-curl -X PUT http://localhost:3000/api/content/press-releases/1 \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title": "Updated NIFCA Statement",
-  "content": "This is the updated official statement."
-}'
-
-DELETE /api/content/press-releases/{{press_release_id}}
-curl -X DELETE http://localhost:3000/api/content/press-releases/1 \
--H "Authorization: Bearer {{contentAdminToken}}"
-
---------------------------------EVENTS
-POST /api/content/events create events
-
-Method 1: Using URL (JSON)
-curl -X POST http://localhost:3000/api/content/events \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title":"Annual Gala",
-  "description":"Join us for our annual gala event.",
-  "event_start_date":"2025-12-01T18:00:00",
-  "event_end_date":"2025-12-01T22:00:00",
-  "location":"NIFCA Headquarters",
-  "picture": "https://example.com/images/gala_poster.jpg"
-}'
-
-Method 2: Using File Upload (multipart/form-data)
-curl -X POST http://localhost:3000/api/content/events \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "title=Digital Arts Workshop" \
--F "description=Learn digital art techniques from professionals" \
--F "event_start_date=2025-07-01T14:00:00" \
--F "event_end_date=2025-07-01T17:00:00" \
--F "location=Arts Center Room 3" \
--F "pictureFile=@/path/to/event-poster.jpg"
-
-Note: When both pictureFile and picture are provided, pictureFile takes priority.
-Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
-
-GET /api/content/events - to get all events with pagination
-curl -X GET http://localhost:3000/api/content/events?page=1&limit=4
-
-PUT /api/content/events/{{event_id}} - modify events
-
-Method 1: Update with URL (JSON)
-curl -X PUT http://localhost:3000/api/content/events/3 \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "title":"Last Gala",
-  "description":"Join us for our last gala event.",
-  "event_start_date":"2025-12-03T18:00:00",
-  "event_end_date":"2025-12-03T23:00:00",
-  "location":"NIFCA Headquarters",
-  "picture": "https://example.com/images/last_gala_poster.jpg"
-}'
-
-Method 2: Update with File Upload (multipart/form-data)
-curl -X PUT http://localhost:3000/api/content/events/3 \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "title=Updated Event with New Poster" \
--F "description=Updated description with new image" \
--F "event_start_date=2025-12-03T18:00:00" \
--F "event_end_date=2025-12-03T23:00:00" \
--F "location=New Venue" \
--F "pictureFile=@/path/to/new-event-poster.jpg"
-
-DELETE /api/content/events/{{event_id}} - delete events
-curl -X DELETE http://localhost:3000/api/content/events/3 \
--H "Authorization: Bearer {{contentAdminToken}}"
-
------------------------------GALLERY
-POST /api/content/gallery - to add gallery items
-
-Method 1: Using URL (JSON)
-curl -X POST http://localhost:3000/api/content/gallery \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "type":"picture",
-  "url":"https://example.com/picture.jpg",
-  "caption":"Event photo from the Annual Gala"
-}'
-
-Method 2: Using File Upload (multipart/form-data)
-curl -X POST http://localhost:3000/api/content/gallery \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "type=picture" \
--F "caption=Gallery photo from event" \
--F "mediaFile=@/path/to/photo.jpg"
-
-Note: When both mediaFile and url are provided, mediaFile takes priority.
-Allowed formats: jpeg, jpg, png, gif, webp (max 10MB)
-
-GET /api/content/gallery - get all gallery items with pagination
-curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
-
-GET Fetch page 1 (10 items - default):
-curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
-
-GET Fetch page 2 (next 10 items):
-curl -X GET http://localhost:3000/api/content/gallery?page=2&limit=10
-
-GET /api/content/gallery/{{media_id}} - get a single gallery item by ID
-curl -X GET http://localhost:3000/api/content/gallery/2
-
-PUT /api/content/gallery/{{media_id}} - update gallery item
-
-Method 1: Update with URL (JSON)
-curl -X PUT http://localhost:3000/api/content/gallery/2 \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{contentAdminToken}}" \
--d '{
-  "type":"video",
-  "url":"https://example.com/video.mp4",
-  "caption":"Updated video from the Annual Gala"
-}'
-
-Method 2: Update with File Upload (multipart/form-data)
-curl -X PUT http://localhost:3000/api/content/gallery/2 \
--H "Authorization: Bearer {{contentAdminToken}}" \
--F "type=picture" \
--F "caption=Updated photo with new file" \
--F "mediaFile=@/path/to/new-photo.jpg"
-
-DELETE /api/content/gallery/{{media_id}} - delete gallery media
-curl -X DELETE http://localhost:3000/api/content/gallery/3 \
--H "Authorization: Bearer {{contentAdminToken}}"
-
-
 
 ================================Client Authentication APIs (/api/client/auth/*)
 POST /api/client/auth/register - Register a new client.
 curl -X POST http://localhost:3000/api/client/auth/register \
 -H "Content-Type: application/json" \
--d '{"username":"testclient4","email":"testclient4@example.com","password":"clientpass","company_id":2}'
+-d '{"username":"testclient4","email":"allenpane399@gmail.com","password":"clientpass","company_id":1}'
 
 POST /api/client/auth/login - Login as a client (session-based).
 curl -X POST http://localhost:3000/api/client/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
 
 GET /api/client/auth/verify?token={{verificationToken}} - Verify a client’s email.
 curl -X GET "http://localhost:3000/api/client/auth/verify?token={{verificationToken}}"
@@ -277,13 +73,13 @@ curl -X GET "http://localhost:3000/api/client/auth/verify?token={{verificationTo
 POST /api/client/auth/activate - Activate a client’s account.
 curl -X POST http://localhost:3000/api/client/auth/activate \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
 
 
-POST /api/client/auth/request-password-reset - Request a password reset for a client.
-curl -X POST http://localhost:3000/api/client/auth/activate \
+POST /api/client/auth/request-password-reset - Request a password reset for a client
+curl -X POST http://localhost:3000/api/client/auth/request-password-reset \
 -H "Content-Type: application/json" \
--d '{"email":"testclient4@example.com","password":"clientpass"}'
+-d '{"email":"newclient2@example.com"}'
 
 POST /api/client/auth/reset-password - Reset a client’s password.
 curl -X POST http://localhost:3000/api/client/auth/change-password \
@@ -305,19 +101,3 @@ curl -X POST http://localhost:3000/api/client/auth/logout \
 -H "Content-Type: application/json" \
 -b cookies.txt
 
-=============================================Applications
-POST /api/auth/register - create application admin
-curl -X POST http://localhost:3000/api/auth/register \
--H "Content-Type: application/json" \
--H "Authorization: Bearer {{siteAdminToken}}" \
--d '{"username":"appadmin","email":"appadmin@nifca.com","password":"appadminpass","role_id":3,"company_id":1}'
-
-POST /api/auth/login   - create application login
-curl -X POST http://localhost:3000/api/auth/login \
--H "Content-Type: application/json" \
--d '{"email":"appadmin@nifca.com","password":"appadminpass"}'
-
-POST /api/client/login   - create clientss login
-curl -X POST http://localhost:3000/api/client/auth/login \
--H "Content-Type: application/json" \
--d '{"email":"allenpane399@gmail.com","password":"clientpass"}'

@@ -12,7 +12,7 @@ curl -X POST http://localhost:3000/api/auth/register/client     -H "Content-Type
 #  Admin registration
 curl -X POST http://localhost:3000/api/auth/register \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjE1LCJyb2xlIjoxLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzAxNDAyNiwiZXhwIjoxNzQzMDE3NjI2fQ.sMWquOy1JjCd04K3dau8pQCIPk7l0hXW4R5SyWZLulM" \
+     -H "Authorization: Bearer {{admin token}}" \
      -d '{
            "username": "testuser4",
            "email": "allenpane399@gmail.com",
@@ -25,7 +25,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 # Changing password
 curl -X POST http://localhost:3000/api/auth/change-password \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI5LCJyb2xlIjo3LCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzAxNTMzMywiZXhwIjoxNzQzMDE4OTMzfQ.4fGlzQQSyB8C1yzC3XXBTBoztzt0j5Xt2wyYVAq1RkA" \
+     -H "Authorization: Bearer {{admin_token}}" \
      -d '{
            "oldPassword": "securepass",
            "newPassword": "securepass1"

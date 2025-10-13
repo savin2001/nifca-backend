@@ -27,6 +27,15 @@ class ClientModel {
     return clients[0];
   }
 
+  async getAll() {
+    const [clients] = await db.query(
+      `SELECT id, username, email, company_id, status, enabled, 
+              failed_attempts, last_login, verified_at 
+       FROM clients`
+    );
+    return clients;
+  }
+
   async create({ username, email, password, company_id }) {
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
