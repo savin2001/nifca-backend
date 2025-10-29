@@ -1,6 +1,5 @@
 // src/services/socialMediaService.js
 const { TwitterApi } = require('twitter-api-v2');
-const { LinkedInApi } = require('linkedin-api-client');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
@@ -75,25 +74,24 @@ class SocialMediaService {
 
   initLinkedIn() {
     try {
-      const clientId = process.env.LINKEDIN_CLIENT_ID;
-      const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+      console.log('--- LinkedIn Initialization ---');
       const accessToken = process.env.LINKEDIN_ACCESS_TOKEN;
 
-      if (!clientId || !clientSecret || !accessToken) {
-        console.warn('LinkedIn credentials missing. LinkedIn posting disabled.');
+      console.log(`LinkedIn Access Token: ${accessToken ? '✓ Present (length: ' + accessToken.length + ')' : '✗ MISSING'}`);
+
+      if (!accessToken) {
+        console.error('❌ LinkedIn Access Token MISSING - LinkedIn posting DISABLED');
         this.linkedinEnabled = false;
         return;
       }
 
-      this.linkedinClient = new LinkedInApi({
-        clientId,
-        clientSecret,
-        accessToken,
-      });
+      // Store the access token for API calls
+      this.linkedinAccessToken = accessToken;
 
-      console.log('LinkedIn client initialized successfully');
+      console.log('✅ LinkedIn client initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize LinkedIn client:', error.message);
+      console.error('❌ Failed to initialize LinkedIn client:', error.message);
+      console.error('Error stack:', error.stack);
       this.linkedinEnabled = false;
     }
   }
@@ -296,41 +294,116 @@ class SocialMediaService {
   }
 
   /**
+   * Get LinkedIn user profile (for personal posting)
+   * @returns {Promise<string|null>} User ID or null
+   */
+  async getLinkedInUserProfile() {
+    try {
+      const response = await axios.get('https://api.linkedin.com/v2/me', {
+        headers: {
+          'Authorization': `Bearer ${this.linkedinAccessToken}`,
+        }
+      });
+
+      console.log('LinkedIn User Profile:', response.data);
+      return response.data.id; // This is the user's ID
+    } catch (error) {
+      console.error('Error fetching LinkedIn user profile:', error.response?.data || error.message);
+      return null;
+    }
+  }
+
+  /**
    * Post to LinkedIn
    * @param {string} type - Content type
    * @param {object} content - Content object
    * @returns {Promise<object|null>} LinkedIn post object or null
    */
   async postToLinkedIn(type, content) {
-    if (!this.linkedinEnabled || !this.linkedinClient) {
-      console.log('LinkedIn posting is disabled');
+    console.log('\n💼 === Attempting LinkedIn Post ===');
+    console.log(`LinkedIn Enabled: ${this.linkedinEnabled}`);
+    console.log(`LinkedIn Token Ready: ${!!this.linkedinAccessToken}`);
+
+    if (!this.linkedinEnabled || !this.linkedinAccessToken) {
+      console.log('❌ LinkedIn posting is DISABLED (not enabled or token not set)');
       return null;
     }
 
     try {
+      console.log(`Content Type: ${type}`);
+      console.log(`Content ID: ${content.id}`);
+      console.log(`Content Title: ${content.title}`);
+
+      // Get user profile for personal posting
+      console.log('📋 Fetching LinkedIn user profile...');
+      const userId = await this.getLinkedInUserProfile();
+
+      if (!userId) {
+        throw new Error('Failed to get LinkedIn user profile.');
+      }
+
+      console.log(`✓ User ID: ${userId}`);
+
       const postText = this.formatPost(type, content);
+      console.log(`Generated Post Text (${postText.length} chars): ${postText.substring(0, 100)}...`);
 
       // LinkedIn allows longer posts (3000 characters)
       const linkedInText = postText.length > 3000 ? this.truncateText(postText, 2997) : postText;
+      console.log(`Final LinkedIn Text (${linkedInText.length} chars)`);
 
-      const post = await this.linkedinClient.createPost({
-        text: linkedInText,
-        visibility: 'PUBLIC'
-      });
+      // LinkedIn Share API v2 payload (for personal posting)
+      const sharePayload = {
+        author: `urn:li:person:${userId}`,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: {
+              text: linkedInText
+            },
+            shareMediaCategory: 'NONE'
+          }
+        },
+        visibility: {
+          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+        }
+      };
 
-      console.log(`Successfully posted to LinkedIn: ${post.id}`);
+      console.log('📤 Posting to LinkedIn API...');
+      console.log('Payload:', JSON.stringify(sharePayload, null, 2));
+
+      const response = await axios.post(
+        'https://api.linkedin.com/v2/ugcPosts',
+        sharePayload,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.linkedinAccessToken}`,
+            'Content-Type': 'application/json',
+            'X-Restli-Protocol-Version': '2.0.0'
+          }
+        }
+      );
+
+      const postId = response.data.id;
+      console.log(`✅ Successfully posted to LinkedIn!`);
+      console.log(`Post ID: ${postId}`);
+
       return {
         success: true,
         platform: 'linkedin',
-        postId: post.id,
-        url: post.url || null
+        postId: postId,
+        url: `https://www.linkedin.com/feed/update/${postId}/`
       };
     } catch (error) {
-      console.error('Failed to post to LinkedIn:', error.message);
+      console.error('❌ Failed to post to LinkedIn!');
+      console.error('Error Message:', error.message);
+      console.error('Error Response:', JSON.stringify(error.response?.data, null, 2));
+      console.error('Status Code:', error.response?.status);
+
       return {
         success: false,
         platform: 'linkedin',
-        error: error.message
+        error: error.message,
+        details: error.response?.data
       };
     }
   }
@@ -343,6 +416,13 @@ class SocialMediaService {
    * @returns {Promise<object>} Results from all platforms
    */
   async postToSocialMedia(type, content, options = {}) {
+    console.log('\n🌐 === Social Media Service: postToSocialMedia Called ===');
+    console.log('Content Type:', type);
+    console.log('Content ID:', content.id);
+    console.log('Content Title:', content.title);
+    console.log('Options:', options);
+    console.log('Service Status:', this.getStatus());
+
     const results = {
       twitter: null,
       linkedin: null
@@ -350,14 +430,27 @@ class SocialMediaService {
 
     // Post to Twitter if enabled and requested
     if (options.twitter && this.twitterEnabled) {
+      console.log('→ Posting to Twitter...');
       results.twitter = await this.postToTwitter(type, content);
+    } else {
+      console.log('→ Skipping Twitter:', {
+        requested: options.twitter,
+        enabled: this.twitterEnabled
+      });
     }
 
     // Post to LinkedIn if enabled and requested
     if (options.linkedin && this.linkedinEnabled) {
+      console.log('→ Posting to LinkedIn...');
       results.linkedin = await this.postToLinkedIn(type, content);
+    } else {
+      console.log('→ Skipping LinkedIn:', {
+        requested: options.linkedin,
+        enabled: this.linkedinEnabled
+      });
     }
 
+    console.log('🌐 === Social Media Service: Complete ===\n');
     return results;
   }
 

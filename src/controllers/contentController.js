@@ -41,9 +41,28 @@ async function downloadImage(url, newsId) {
 const contentController = {
   // News
   async createNews(req, res) {
+    console.log('\n📥 === BACKEND: Received News Creation Request ===');
+
     const userId = req.user.userId;
     const { title, content, picture: pictureUrl, post_to_twitter, post_to_linkedin } = req.body;
     const uploadedFile = req.file;
+
+    console.log('User ID:', userId);
+    console.log('Request Body:', {
+      title,
+      content: content?.substring(0, 100) + '...',
+      pictureUrl,
+      post_to_twitter,
+      post_to_linkedin
+    });
+    console.log('Uploaded File:', uploadedFile ? {
+      filename: uploadedFile.filename,
+      mimetype: uploadedFile.mimetype,
+      size: uploadedFile.size
+    } : null);
+    console.log('Social Media Flags:');
+    console.log('  post_to_twitter:', post_to_twitter, '(type:', typeof post_to_twitter, ')');
+    console.log('  post_to_linkedin:', post_to_linkedin, '(type:', typeof post_to_linkedin, ')');
 
     try {
       const user = await userModel.findById(userId);
@@ -76,24 +95,51 @@ const contentController = {
 
       // Social media posting (async, non-blocking)
       let socialMediaResults = null;
+      console.log('\n📱 Checking social media posting...');
+      console.log('  Should post to Twitter?', !!post_to_twitter);
+      console.log('  Should post to LinkedIn?', !!post_to_linkedin);
+
       if (post_to_twitter || post_to_linkedin) {
+        console.log('✓ Social media posting requested - fetching news data...');
         const newsData = await contentModel.getNewsById(newsId);
-        socialMediaService.postToSocialMedia('news', newsData, {
+        console.log('News Data for social media:', {
+          id: newsData.id,
+          title: newsData.title,
+          content: newsData.content?.substring(0, 100) + '...',
+          picture: newsData.picture
+        });
+
+        const socialMediaOptions = {
           twitter: post_to_twitter === true || post_to_twitter === 'true',
           linkedin: post_to_linkedin === true || post_to_linkedin === 'true'
-        }).then(results => {
-          console.log('Social media posting results:', results);
-        }).catch(err => {
-          console.error('Social media posting error:', err);
-        });
+        };
+        console.log('Social Media Options:', socialMediaOptions);
+
+        socialMediaService.postToSocialMedia('news', newsData, socialMediaOptions)
+          .then(results => {
+            console.log('\n✅ Social media posting completed!');
+            console.log('Results:', JSON.stringify(results, null, 2));
+          })
+          .catch(err => {
+            console.error('\n❌ Social media posting error!');
+            console.error('Error:', err.message);
+            console.error('Stack:', err.stack);
+          });
+      } else {
+        console.log('✗ No social media posting requested');
       }
 
-      res.status(201).json({
+      console.log('\n📤 Sending response to frontend...');
+      const responseData = {
         message: "News created successfully",
         newsId,
         picture: picturePath,
         socialMediaQueued: !!(post_to_twitter || post_to_linkedin)
-      });
+      };
+      console.log('Response Data:', responseData);
+      console.log('📥 === BACKEND: News Creation Complete ===\n');
+
+      res.status(201).json(responseData);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error while creating news" });
