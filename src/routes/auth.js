@@ -131,10 +131,10 @@ router.post(
     body("url").isString().notEmpty(),
     body("caption").optional().isString(),
   ],
-  contentController.createGalleryItem
+  contentController.createGalleryMedia
 );
-router.get("/gallery", authMiddleware, contentController.getAllGalleryItems);
-router.get("/gallery/:id", authMiddleware, [param("id").isInt()], contentController.getGalleryItemById);
+router.get("/gallery", authMiddleware, contentController.getAllGalleryMedia);
+router.get("/gallery/:id", authMiddleware, [param("id").isInt()], contentController.getGalleryMediaById);
 router.put(
   "/gallery/:id",
   authMiddleware,
@@ -144,9 +144,9 @@ router.put(
     body("url").isString().notEmpty(),
     body("caption").optional().isString(),
   ],
-  contentController.updateGalleryItem
+  contentController.updateGalleryMedia
 );
-router.delete("/gallery/:id", authMiddleware, [param("id").isInt()], contentController.deleteGalleryItem);
+router.delete("/gallery/:id", authMiddleware, [param("id").isInt()], contentController.deleteGalleryMedia);
 
 // Application Admin Routes
 router.post(

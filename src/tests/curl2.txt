@@ -23,14 +23,14 @@ curl -X POST http://localhost:3000/api/auth/login \
 -d '{"email":"allenpane399@gmail.com","password":"contentpass"}'
 
 
-GET /api/auth/verify?token={{verificationToken}} - Verify an admin user’s email.
+GET /api/auth/verify?token={{verificationToken}} - Verify an admin user's email.
 curl -X GET "http://localhost:3000/api/auth/verify?token={{verificationToken}}"
 
-POST /api/auth/change-password - Change an admin user’s password.
+POST /api/auth/change-password - Change an admin user's password.
 curl -X POST http://localhost:3000/api/auth/change-password \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM1LCJyb2xlIjoyLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MzA4MzI1MCwiZXhwIjoxNzQzMDg2ODUwfQ.lHShHRqc84F1wrTHf4V0rfqZJB8T9IGKHVVdHNScuas"" \
--d '{"oldPassword":"adminpass","newPassword":"newadminpass"}'
+-H "Authorization: Bearer {{adminToken}}" \
+-d '{"oldPassword":"adminpassword","newPassword":"newadminpass"}'
 
 PATCH /api/users/{{user_id}}/disable - disable user
 curl -X PATCH http://localhost:3000/api/users/2/disable \
@@ -53,44 +53,394 @@ curl -X POST http://localhost:3000/api/users/2/force-logout \
 POST /api/auth/logout - Logout an admin user.
 curl -X POST http://localhost:3000/api/auth/logout \
 -H "Content-Type: application/json" \
--H "Authorization: Bearer {{adminToken}}"\
+-H "Authorization: Bearer {{adminToken}}"
+
+===============================Content admin routes (/api/content/*)
+
+-------------------------------NEWS (with Social Media Support)
+POST /api/content/news - create a new news article
+
+Method 1: Using URL (JSON) - NO social media
+curl -X POST http://localhost:3000/api/content/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "New Test Article Today",
+  "content": "This is the content of the new test article from today.",
+  "picture": "https://images.unsplash.com/photo-1759928222798-63e73f690563?q=80&w=1172&auto=format&fit=crop"
+}'
+
+Method 2: Using URL (JSON) - Post to TWITTER only
+curl -X POST http://localhost:3000/api/content/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA Launches Financial Innovation Hub",
+  "content": "The Nairobi International Finance Centre is proud to announce the launch of a new Financial Innovation Hub aimed at fostering collaboration between fintech startups and traditional institutions.",
+  "picture": "https://images.unsplash.com/photo-1759928222798-63e73f690563?q=80&w=1172&auto=format&fit=crop",
+  "post_to_twitter": true,
+  "post_to_linkedin": false
+}'
+
+Method 3: Using URL (JSON) - Post to LINKEDIN only
+curl -X POST http://localhost:3000/api/content/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA Reports Record Growth in Q3 2025",
+  "content": "NIFCA has achieved unprecedented growth in the third quarter of 2025, with a 45 percent increase in registered financial institutions.",
+  "picture": "https://example.com/growth-chart.jpg",
+  "post_to_twitter": false,
+  "post_to_linkedin": true
+}'
+
+Method 4: Using URL (JSON) - Post to BOTH platforms (with image)
+curl -X POST http://localhost:3000/api/content/news \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA Wins Best Financial Center Award 2025",
+  "content": "We are thrilled to announce that NIFCA has been awarded the Best Emerging Financial Center 2025 by the Global Financial Centers Index.",
+  "picture": "https://example.com/award-image.jpg",
+  "post_to_twitter": true,
+  "post_to_linkedin": true
+}'
+
+Method 5: Using File Upload (multipart/form-data) - NO social media
+curl -X POST http://localhost:3000/api/content/news \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Breaking News: File Upload Test" \
+-F "content=This article was created using file upload instead of URL" \
+-F "pictureFile=@/path/to/your/image.jpg"
+
+Method 6: Using File Upload (multipart/form-data) - Post to BOTH platforms (with image)
+curl -X POST http://localhost:3000/api/content/news \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=NIFCA Opens New Regional Office" \
+-F "content=NIFCA is expanding its presence across East Africa with the opening of a new regional office in Kampala Uganda" \
+-F "pictureFile=@/path/to/office-photo.jpg" \
+-F "post_to_twitter=true" \
+-F "post_to_linkedin=true"
+
+Note: When both pictureFile and picture are provided, pictureFile takes priority.
+Note: Images will be automatically uploaded to Twitter (LinkedIn text-only for now)
+Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
+
+
+GET /api/content/news - to get all news
+curl -X GET http://localhost:3000/api/content/news
+
+GET /api/content/news/ Fetch page 1 (4 articles):
+curl -X GET http://localhost:3000/api/content/news?page=1&limit=4
+
+GET Fetch page 2 (next 4 articles):
+curl -X GET http://localhost:3000/api/content/news?page=2&limit=4
+
+GET /api/content/news/{{news_id}} - Get specific news by ID
+curl -X GET http://localhost:3000/api/content/news/1
+
+PUT /api/content/news/{{news_id}} - to update news article
+
+Method 1: Update with URL (JSON)
+curl -X PUT http://localhost:3000/api/content/news/10 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "Updated Article Title 4",
+  "content": "This is the updated content of the article.",
+  "picture": "https://images.pexels.com/photos/31325371/pexels-photo-31325371.jpeg"
+}'
+
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/news/10 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Updated with New Image File" \
+-F "content=This update includes a newly uploaded image" \
+-F "pictureFile=@/path/to/updated-image.jpg"
+
+DELETE /api/content/news/{{news_id}}
+curl -X DELETE http://localhost:3000/api/content/news/1 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+-------------------------------PRESS RELEASES (with Social Media Support)
+POST /api/content/press-releases - create a new press release
+
+Method 1: NO social media
+curl -X POST http://localhost:3000/api/content/press-releases \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "Official NIFCA Statement on New Regulations",
+  "content": "This is the official statement regarding the new 2025 financial regulations."
+}'
+
+Method 2: Post to TWITTER only
+curl -X POST http://localhost:3000/api/content/press-releases \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA Partners with World Bank for Financial Inclusion",
+  "content": "FOR IMMEDIATE RELEASE - Nairobi Kenya - The Nairobi International Finance Centre today announced a strategic partnership with the World Bank to launch a comprehensive financial inclusion initiative.",
+  "post_to_twitter": true,
+  "post_to_linkedin": false
+}'
+
+Method 3: Post to LINKEDIN only
+curl -X POST http://localhost:3000/api/content/press-releases \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA Announces New Green Finance Framework",
+  "content": "PRESS RELEASE - NIFCA has unveiled a groundbreaking Green Finance Framework designed to accelerate sustainable investment in the region.",
+  "post_to_twitter": false,
+  "post_to_linkedin": true
+}'
+
+Method 4: Post to BOTH platforms
+curl -X POST http://localhost:3000/api/content/press-releases \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "NIFCA CEO Appointed to UN Financial Advisory Board",
+  "content": "IMMEDIATE RELEASE - The CEO of the Nairobi International Finance Centre Dr Jane Wanjiku has been appointed to the United Nations Financial Advisory Board.",
+  "post_to_twitter": true,
+  "post_to_linkedin": true
+}'
+
+GET /api/content/press-releases - to get all press releases with pagination
+curl -X GET http://localhost:3000/api/content/press-releases?page=1&limit=4
+
+GET /api/content/press-releases/{{press_release_id}} - to get a single press release by ID
+curl -X GET http://localhost:3000/api/content/press-releases/1
+
+PUT /api/content/press-releases/{{press_release_id}} - to update a press release
+curl -X PUT http://localhost:3000/api/content/press-releases/1 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title": "Updated NIFCA Statement",
+  "content": "This is the updated official statement."
+}'
+
+DELETE /api/content/press-releases/{{press_release_id}}
+curl -X DELETE http://localhost:3000/api/content/press-releases/1 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+--------------------------------EVENTS (with Social Media Support)
+POST /api/content/events create events
+
+Method 1: Using URL (JSON) - NO social media
+curl -X POST http://localhost:3000/api/content/events \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title":"Annual Gala",
+  "description":"Join us for our annual gala event.",
+  "event_start_date":"2025-12-01T18:00:00",
+  "event_end_date":"2025-12-01T22:00:00",
+  "location":"NIFCA Headquarters",
+  "picture": "https://example.com/images/gala_poster.jpg"
+}'
+
+Method 2: Using URL (JSON) - Post to TWITTER only (with image)
+curl -X POST http://localhost:3000/api/content/events \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title":"NIFCA Annual Finance Summit 2025",
+  "description":"Join us for the biggest financial services event of the year! Three days of networking learning and collaboration.",
+  "event_start_date":"2025-11-20T09:00:00Z",
+  "event_end_date":"2025-11-22T17:00:00Z",
+  "location":"Nairobi International Convention Centre Nairobi",
+  "picture":"https://example.com/summit-banner.jpg",
+  "post_to_twitter":true,
+  "post_to_linkedin":false
+}'
+
+Method 3: Using URL (JSON) - Post to LINKEDIN only
+curl -X POST http://localhost:3000/api/content/events \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title":"FinTech Innovation Workshop",
+  "description":"A hands-on workshop for fintech entrepreneurs and developers. Learn about API integration payment systems and regulatory compliance.",
+  "event_start_date":"2025-10-25T14:00:00Z",
+  "event_end_date":"2025-10-25T18:00:00Z",
+  "location":"NIFCA Innovation Hub Westlands Nairobi",
+  "post_to_twitter":false,
+  "post_to_linkedin":true
+}'
+
+Method 4: Using URL (JSON) - Post to BOTH platforms (with image)
+curl -X POST http://localhost:3000/api/content/events \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title":"Women in Finance Leadership Forum",
+  "description":"An inspiring forum celebrating and empowering women leaders in the financial services industry. Featuring keynote speeches panel discussions and networking.",
+  "event_start_date":"2025-12-05T08:30:00Z",
+  "event_end_date":"2025-12-05T16:00:00Z",
+  "location":"Villa Rosa Kempinski Nairobi",
+  "picture":"https://example.com/women-finance.jpg",
+  "post_to_twitter":true,
+  "post_to_linkedin":true
+}'
+
+Method 5: Using File Upload (multipart/form-data) - NO social media
+curl -X POST http://localhost:3000/api/content/events \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Digital Arts Workshop" \
+-F "description=Learn digital art techniques from professionals" \
+-F "event_start_date=2025-07-01T14:00:00" \
+-F "event_end_date=2025-07-01T17:00:00" \
+-F "location=Arts Center Room 3" \
+-F "pictureFile=@/path/to/event-poster.jpg"
+
+Method 6: Using File Upload (multipart/form-data) - Post to BOTH platforms (with image)
+curl -X POST http://localhost:3000/api/content/events \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=NIFCA Networking Cocktail Evening" \
+-F "description=Join us for an exclusive networking evening with key players in Kenya financial sector" \
+-F "event_start_date=2025-11-15T18:00:00Z" \
+-F "event_end_date=2025-11-15T21:00:00Z" \
+-F "location=The Palacina Westlands Nairobi" \
+-F "pictureFile=@/path/to/cocktail-poster.jpg" \
+-F "post_to_twitter=true" \
+-F "post_to_linkedin=true"
+
+Note: When both pictureFile and picture are provided, pictureFile takes priority.
+Note: Images will be automatically uploaded to Twitter (LinkedIn text-only for now)
+Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
+
+GET /api/content/events - to get all events with pagination
+curl -X GET http://localhost:3000/api/content/events?page=1&limit=4
+
+GET /api/content/events/{{event_id}} - Get specific event by ID
+curl -X GET http://localhost:3000/api/content/events/1
+
+PUT /api/content/events/{{event_id}} - modify events
+
+Method 1: Update with URL (JSON)
+curl -X PUT http://localhost:3000/api/content/events/3 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "title":"Last Gala",
+  "description":"Join us for our last gala event.",
+  "event_start_date":"2025-12-03T18:00:00",
+  "event_end_date":"2025-12-03T23:00:00",
+  "location":"NIFCA Headquarters",
+  "picture": "https://example.com/images/last_gala_poster.jpg"
+}'
+
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/events/3 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "title=Updated Event with New Poster" \
+-F "description=Updated description with new image" \
+-F "event_start_date=2025-12-03T18:00:00" \
+-F "event_end_date=2025-12-03T23:00:00" \
+-F "location=New Venue" \
+-F "pictureFile=@/path/to/new-event-poster.jpg"
+
+DELETE /api/content/events/{{event_id}} - delete events
+curl -X DELETE http://localhost:3000/api/content/events/3 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
+-----------------------------GALLERY
+POST /api/content/gallery - to add gallery items
+
+Method 1: Using URL (JSON)
+curl -X POST http://localhost:3000/api/content/gallery \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "type":"picture",
+  "url":"https://example.com/picture.jpg",
+  "caption":"Event photo from the Annual Gala"
+}'
+
+Method 2: Using File Upload (multipart/form-data)
+curl -X POST http://localhost:3000/api/content/gallery \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "type=picture" \
+-F "caption=Gallery photo from event" \
+-F "mediaFile=@/path/to/photo.jpg"
+
+Note: When both mediaFile and url are provided, mediaFile takes priority.
+Allowed formats: jpeg, jpg, png, gif, webp (max 10MB)
+
+GET /api/content/gallery - get all gallery items with pagination
+curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
+
+GET Fetch page 1 (10 items - default):
+curl -X GET http://localhost:3000/api/content/gallery?page=1&limit=10
+
+GET Fetch page 2 (next 10 items):
+curl -X GET http://localhost:3000/api/content/gallery?page=2&limit=10
+
+GET /api/content/gallery/{{media_id}} - get a single gallery item by ID
+curl -X GET http://localhost:3000/api/content/gallery/2
+
+PUT /api/content/gallery/{{media_id}} - update gallery item
+
+Method 1: Update with URL (JSON)
+curl -X PUT http://localhost:3000/api/content/gallery/2 \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-d '{
+  "type":"video",
+  "url":"https://example.com/video.mp4",
+  "caption":"Updated video from the Annual Gala"
+}'
+
+Method 2: Update with File Upload (multipart/form-data)
+curl -X PUT http://localhost:3000/api/content/gallery/2 \
+-H "Authorization: Bearer {{contentAdminToken}}" \
+-F "type=picture" \
+-F "caption=Updated photo with new file" \
+-F "mediaFile=@/path/to/new-photo.jpg"
+
+DELETE /api/content/gallery/{{media_id}} - delete gallery media
+curl -X DELETE http://localhost:3000/api/content/gallery/3 \
+-H "Authorization: Bearer {{contentAdminToken}}"
+
 
 
 ================================Client Authentication APIs (/api/client/auth/*)
 POST /api/client/auth/register - Register a new client.
 curl -X POST http://localhost:3000/api/client/auth/register \
 -H "Content-Type: application/json" \
--d '{"username":"testclient4","email":"allenpane399@gmail.com","password":"clientpass","company_id":1}'
+-d '{"username":"testclient4","email":"testclient4@example.com","password":"clientpass","company_id":2}'
 
 POST /api/client/auth/login - Login as a client (session-based).
 curl -X POST http://localhost:3000/api/client/auth/login \
 -H "Content-Type: application/json" \
--d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
+-d '{"email":"testclient4@example.com","password":"clientpass"}'
 
-GET /api/client/auth/verify?token={{verificationToken}} - Verify a client’s email.
+GET /api/client/auth/verify?token={{verificationToken}} - Verify a client's email.
 curl -X GET "http://localhost:3000/api/client/auth/verify?token={{verificationToken}}"
 
-POST /api/client/auth/activate - Activate a client’s account.
+POST /api/client/auth/activate - Activate a client's account.
 curl -X POST http://localhost:3000/api/client/auth/activate \
 -H "Content-Type: application/json" \
--d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
+-d '{"email":"testclient4@example.com","password":"clientpass"}'
 
 
-POST /api/client/auth/request-password-reset - Request a password reset for a client
+POST /api/client/auth/request-password-reset - Request a password reset for a client.
 curl -X POST http://localhost:3000/api/client/auth/request-password-reset \
 -H "Content-Type: application/json" \
--d '{"email":"newclient2@example.com"}'
+-d '{"email":"testclient4@example.com"}'
 
-POST /api/client/auth/reset-password - Reset a client’s password.
-curl -X POST http://localhost:3000/api/client/auth/change-password \
+POST /api/client/auth/reset-password - Reset a client's password.
+curl -X POST http://localhost:3000/api/client/auth/reset-password \
 -H "Content-Type: application/json" \
--b cookies.txt \
--d '{"oldPassword":"clientpass","newPassword":"newclientpass"}'
+-d '{"token":"{{resetToken}}","newPassword":"newclientpass"}'
 
 GET /api/client/auth/reset-password-form?token={{resetToken}} - (Temporary) Render a password reset form for a client.
 curl -X GET "http://localhost:3000/api/client/auth/reset-password-form?token={{resetToken}}"
 
-POST /api/client/auth/change-password - Change a client’s password.
+POST /api/client/auth/change-password - Change a client's password.
 curl -X POST http://localhost:3000/api/client/auth/change-password \
 -H "Content-Type: application/json" \
 -b cookies.txt \
@@ -101,3 +451,54 @@ curl -X POST http://localhost:3000/api/client/auth/logout \
 -H "Content-Type: application/json" \
 -b cookies.txt
 
+=============================================Applications
+POST /api/auth/register - create application admin
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{siteAdminToken}}" \
+-d '{"username":"appadmin","email":"appadmin@nifca.com","password":"appadminpass","role_id":3,"company_id":1}'
+
+POST /api/auth/login   - create application login
+curl -X POST http://localhost:3000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"appadmin@nifca.com","password":"appadminpass"}'
+
+POST /api/client/login   - create clientss login
+curl -X POST http://localhost:3000/api/client/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"allenpane399@gmail.com","password":"clientpass"}'
+
+================================SOCIAL MEDIA POSTING NOTES
+# Social media posting is OPTIONAL and works with both URL and FILE uploads
+#
+# HOW IT WORKS:
+# - Add post_to_twitter=true and/or post_to_linkedin=true to any news/press-release/event creation
+# - Works with JSON (URL) and multipart/form-data (file upload)
+# - Images are automatically uploaded to Twitter (text-only for LinkedIn currently)
+# - Posting happens ASYNCHRONOUSLY in background - does not slow down content creation
+#
+# REQUIREMENTS:
+# - Must be authenticated with JWT token (Content Admin role_id=2)
+# - Social media must be enabled in .env (TWITTER_ENABLED=true, LINKEDIN_ENABLED=true)
+# - Valid API credentials configured in .env
+#
+# IMAGE SUPPORT:
+# - Twitter: Supports images from URLs AND uploaded files
+# - LinkedIn: Text-only posts for now (image support coming soon)
+# - Images can be from URLs or file uploads (both work)
+#
+# POST FORMATTING:
+# - Twitter: 280 character limit (auto-truncated)
+# - LinkedIn: 3000 character limit (auto-truncated)
+# - Posts include emojis and link back to your FRONTEND_URL
+#
+# RESPONSE FORMAT:
+# {"message":"News created successfully","newsId":42,"picture":"/assets/news/...","socialMediaQueued":true}
+#
+# SETUP:
+# 1. Set TWITTER_ENABLED=true and/or LINKEDIN_ENABLED=true in .env
+# 2. Add your Twitter/LinkedIn API credentials to .env
+# 3. Run database migration: mysql -u user -p database < src/sql/social_media_migration.sql
+# 4. Restart the server
+#
+# See SOCIAL_MEDIA_SETUP.md for detailed setup instructions
