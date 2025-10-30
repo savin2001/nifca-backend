@@ -128,7 +128,7 @@ Allowed image formats: jpeg, jpg, png, gif, webp (max 5MB)
 
 
 GET /api/content/news - to get all news
-curl -X GET http://localhost:3000/api/content/news
+curl -X GET https://nifca-backend.onrender.com/api/content/news
 
 GET /api/content/news/ Fetch page 1 (4 articles):
 curl -X GET http://localhost:3000/api/content/news?page=1&limit=4

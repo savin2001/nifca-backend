@@ -32,7 +32,7 @@ curl -X POST http://localhost:3000/api/auth/change-password \
          }'
 
 # Fetch all users
-curl -X GET http://localhost:3000/api/users \
+curl -X GET https://nifca-backend.onrender.com \
      -H "Authorization: Bearer {{user_token}}" \
 
 # Fetch single user
