@@ -26,6 +26,7 @@ const pdfGeneratorService = {
         const doc = new PDFDocument({
           size: "A4",
           margins: { top: 50, bottom: 50, left: 50, right: 50 },
+          bufferPages: true,
           info: {
             Title: `NIFCA Application - ${application.reference_number || application.id}`,
             Author: "NIFCA",
