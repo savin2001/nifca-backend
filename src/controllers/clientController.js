@@ -13,17 +13,16 @@ const clientController = {
 
     const { username, email, password, company_id } = req.body;
 
+    // Default company_id to 1 (NIFCA) if not provided
+    const effectiveCompanyId = company_id || 1;
+
     try {
       const existingClient = await clientModel.findByEmail(email);
       if (existingClient) {
         return res.status(400).json({ error: "Email already in use" });
       }
 
-      if (!company_id) {
-        return res.status(400).json({ error: "Client users must provide a company_id" });
-      }
-
-      const company = await clientModel.validateCompany(company_id);
+      const company = await clientModel.validateCompany(effectiveCompanyId);
       if (!company) {
         return res.status(400).json({ error: "Invalid company ID" });
       }
@@ -32,7 +31,7 @@ const clientController = {
         username,
         email,
         password,
-        company_id,
+        company_id: effectiveCompanyId,
       });
 
       await sendVerificationEmail(email, newClient.verificationToken, "client");
@@ -249,6 +248,31 @@ const clientController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error during logout" });
+    }
+  },
+
+  async getSession(req, res) {
+    // If middleware passed, user is authenticated
+    const userId = req.user.userId;
+
+    try {
+      const client = await clientModel.findById(userId);
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      // Return user info (excluding sensitive data)
+      res.status(200).json({
+        user: {
+          id: client.id,
+          username: client.username,
+          email: client.email,
+          company_id: client.company_id,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching session" });
     }
   },
 };

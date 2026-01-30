@@ -13,6 +13,7 @@ const userRoutes = require("./routes/user");
 const clientRoutes = require("./routes/client");
 const applicationRoutes = require("./routes/application"); // New
 const clientApplicationRoutes = require("./routes/clientApplication"); // New
+const multiSectionApplicationRoutes = require("./routes/multiSectionApplication"); // Multi-section applications
 const linkedinOAuthRoutes = require("./routes/linkedinOAuth"); // LinkedIn OAuth
 const path = require('path');
 
@@ -24,8 +25,9 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
   "http://localhost:3000",
-  "https://nifca.netlify.app"
+  " http://localhost:5173"
 ].filter(Boolean); // Remove undefined values
 
 app.use(cors({
@@ -95,6 +97,7 @@ app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/applications", applicationRoutes); // New
 app.use("/api/client/applications", clientApplicationRoutes); // New
+app.use("/api/client/multi-applications", multiSectionApplicationRoutes); // Multi-section applications
 app.use("/api/linkedin", linkedinOAuthRoutes); // LinkedIn OAuth
 
 module.exports = app;

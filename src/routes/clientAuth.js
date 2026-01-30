@@ -10,7 +10,7 @@ const validateRegistration = [
   body("username").isString().isLength({ min: 3 }).withMessage("Username must be at least 3 characters long"),
   body("email").isEmail().withMessage("Invalid email format"),
   body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
-  body("company_id").isInt().withMessage("Company ID must be an integer"),
+  body("company_id").optional().isInt().withMessage("Company ID must be an integer"),
 ];
 
 const validatePasswordChange = [
@@ -34,6 +34,7 @@ const validatePasswordReset = [
 
 router.post("/register", validateRegistration, clientController.register);
 router.post("/login", clientController.login);
+router.get("/session", clientAuthMiddleware, clientController.getSession);
 router.get("/verify", query("token").isString(), clientController.verifyEmail);
 router.post("/activate", validateActivation, clientController.activateAccount);
 router.post("/request-password-reset", validatePasswordResetRequest, clientController.requestPasswordReset);

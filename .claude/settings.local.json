@@ -4,7 +4,18 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout:*)",
+      "Bash(tree:*)",
+      "Bash(xargs cat:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

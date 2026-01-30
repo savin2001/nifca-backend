@@ -502,3 +502,261 @@ curl -X POST http://localhost:3000/api/client/auth/login \
 # 4. Restart the server
 #
 # See SOCIAL_MEDIA_SETUP.md for detailed setup instructions
+
+================================Multi-Section Applications (Client) (/api/client/multi-applications/*)
+# These endpoints allow clients to create and manage multi-section applications
+# Requires client session authentication (login first to get session cookie)
+
+-------------------------------APPLICATION TYPES
+GET /api/client/multi-applications/types - List all active application types
+curl -X GET http://localhost:3000/api/client/multi-applications/types \
+-b cookies.txt
+
+GET /api/client/multi-applications/types/:typeId/structure - Get application type with full structure (sections and fields)
+curl -X GET http://localhost:3000/api/client/multi-applications/types/1/structure \
+-b cookies.txt
+
+-------------------------------APPLICATION CRUD
+POST /api/client/multi-applications - Create a new draft application
+curl -X POST http://localhost:3000/api/client/multi-applications \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{
+  "application_type_id": 1,
+  "title": "My Financial Services License Application"
+}'
+
+GET /api/client/multi-applications - List all client's applications (with pagination)
+curl -X GET "http://localhost:3000/api/client/multi-applications?page=1&limit=10" \
+-b cookies.txt
+
+GET /api/client/multi-applications - Filter by status
+curl -X GET "http://localhost:3000/api/client/multi-applications?status=draft" \
+-b cookies.txt
+
+GET /api/client/multi-applications/:id - Get single application with all data
+curl -X GET http://localhost:3000/api/client/multi-applications/1 \
+-b cookies.txt
+
+DELETE /api/client/multi-applications/:id - Delete a draft application (only drafts can be deleted)
+curl -X DELETE http://localhost:3000/api/client/multi-applications/1 \
+-b cookies.txt
+
+-------------------------------SECTION DATA OPERATIONS
+GET /api/client/multi-applications/:id/sections/:sectionId - Get section data with fields
+curl -X GET http://localhost:3000/api/client/multi-applications/1/sections/1 \
+-b cookies.txt
+
+PUT /api/client/multi-applications/:id/sections/:sectionId - Save section data
+curl -X PUT http://localhost:3000/api/client/multi-applications/1/sections/1 \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{
+  "field_data": {
+    "company_name": "Test Company Ltd",
+    "registration_number": "ABC-123456",
+    "date_of_incorporation": "2020-01-15",
+    "country_of_incorporation": "KE",
+    "company_type": "LLC"
+  }
+}'
+
+PUT - Save Contact Details section (section 2)
+curl -X PUT http://localhost:3000/api/client/multi-applications/1/sections/2 \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{
+  "field_data": {
+    "contact_person_name": "John Doe",
+    "contact_email": "john@company.com",
+    "contact_phone": "+254 700 123456",
+    "physical_address": "123 Business Street, Nairobi, Kenya",
+    "postal_address": "P.O. Box 12345, Nairobi"
+  }
+}'
+
+PUT - Save Business Activities section (section 3)
+curl -X PUT http://localhost:3000/api/client/multi-applications/1/sections/3 \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{
+  "field_data": {
+    "proposed_activities": ["BANKING", "SECURITIES"],
+    "business_plan_summary": "Our company plans to provide comprehensive banking and securities trading services in the East African region.",
+    "projected_annual_revenue": 5000000,
+    "initial_capital": 10000000
+  }
+}'
+
+PUT - Save Directors & Shareholders section (section 4)
+curl -X PUT http://localhost:3000/api/client/multi-applications/1/sections/4 \
+-H "Content-Type: application/json" \
+-b cookies.txt \
+-d '{
+  "field_data": {
+    "number_of_directors": 3,
+    "director_names": "Jane Smith\nJohn Doe\nMary Johnson",
+    "beneficial_owners": "Jane Smith - 40%\nJohn Doe - 35%\nMary Johnson - 25%",
+    "has_criminal_record": "no"
+  }
+}'
+
+POST /api/client/multi-applications/:id/sections/:sectionId/validate - Validate a section
+curl -X POST http://localhost:3000/api/client/multi-applications/1/sections/1/validate \
+-H "Content-Type: application/json" \
+-b cookies.txt
+
+-------------------------------DOCUMENT OPERATIONS
+POST /api/client/multi-applications/:id/documents - Upload a document
+curl -X POST http://localhost:3000/api/client/multi-applications/1/documents \
+-b cookies.txt \
+-F "file=@/path/to/certificate_of_incorporation.pdf" \
+-F "section_id=5" \
+-F "field_id=1" \
+-F "document_type=Certificate of Incorporation"
+
+GET /api/client/multi-applications/:id/documents - List all documents for an application
+curl -X GET http://localhost:3000/api/client/multi-applications/1/documents \
+-b cookies.txt
+
+DELETE /api/client/multi-applications/:id/documents/:docId - Delete a document (only for drafts)
+curl -X DELETE http://localhost:3000/api/client/multi-applications/1/documents/1 \
+-b cookies.txt
+
+-------------------------------SUBMISSION & STATUS
+POST /api/client/multi-applications/:id/submit - Submit application for review
+curl -X POST http://localhost:3000/api/client/multi-applications/1/submit \
+-H "Content-Type: application/json" \
+-b cookies.txt
+
+GET /api/client/multi-applications/:id/pdf - Download application PDF (after submission)
+curl -X GET http://localhost:3000/api/client/multi-applications/1/pdf \
+-b cookies.txt \
+-o application.pdf
+
+POST /api/client/multi-applications/:id/cancel - Cancel an application
+curl -X POST http://localhost:3000/api/client/multi-applications/1/cancel \
+-H "Content-Type: application/json" \
+-b cookies.txt
+
+================================Multi-Section Applications (Admin) (/api/applications/*)
+# These endpoints allow Application Admins (role_id=3) to review and manage applications
+# Requires JWT authentication
+
+-------------------------------APPLICATION TYPES (Admin)
+GET /api/applications/types - Get all application types (including inactive)
+curl -X GET http://localhost:3000/api/applications/types \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+-------------------------------STATISTICS & DASHBOARD
+GET /api/applications/statistics - Get application statistics for dashboard
+curl -X GET http://localhost:3000/api/applications/statistics \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET /api/applications/pending-review - Get applications pending review
+curl -X GET "http://localhost:3000/api/applications/pending-review?limit=10" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+-------------------------------APPLICATION LISTING (Filtered)
+GET /api/applications/filtered - Get all applications with filters and pagination
+curl -X GET "http://localhost:3000/api/applications/filtered?page=1&limit=20" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET - Filter by status
+curl -X GET "http://localhost:3000/api/applications/filtered?status=submitted" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET - Filter by application type
+curl -X GET "http://localhost:3000/api/applications/filtered?application_type_id=1" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET - Filter by client
+curl -X GET "http://localhost:3000/api/applications/filtered?client_id=7" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET - Filter by date range
+curl -X GET "http://localhost:3000/api/applications/filtered?date_from=2025-01-01&date_to=2025-12-31" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET - Combined filters
+curl -X GET "http://localhost:3000/api/applications/filtered?status=submitted&application_type_id=1&page=1&limit=10" \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+-------------------------------APPLICATION DETAILS
+GET /api/applications/:id/full - Get full application details with sections and documents
+curl -X GET http://localhost:3000/api/applications/1/full \
+-H "Authorization: Bearer {{appAdminToken}}"
+
+GET /api/applications/:id/pdf - Download application PDF (admin access)
+curl -X GET http://localhost:3000/api/applications/1/pdf \
+-H "Authorization: Bearer {{appAdminToken}}" \
+-o application_admin.pdf
+
+-------------------------------APPLICATION REVIEW
+PATCH /api/applications/:id/status - Update application status
+curl -X PATCH http://localhost:3000/api/applications/1/status \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{appAdminToken}}" \
+-d '{"status": "under_review"}'
+
+POST /api/applications/:id/review-multi - Review multi-section application (approve/reject)
+curl -X POST http://localhost:3000/api/applications/1/review-multi \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{appAdminToken}}" \
+-d '{
+  "status": "under_review",
+  "review_comments": "Application is under review. Additional documents may be requested."
+}'
+
+POST - Approve application
+curl -X POST http://localhost:3000/api/applications/1/review-multi \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{appAdminToken}}" \
+-d '{
+  "status": "approved",
+  "review_comments": "Application approved. Welcome to NIFCA!"
+}'
+
+POST - Reject application
+curl -X POST http://localhost:3000/api/applications/1/review-multi \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{appAdminToken}}" \
+-d '{
+  "status": "rejected",
+  "review_comments": "Application rejected due to incomplete documentation. Please resubmit with valid certificates."
+}'
+
+================================NOTES
+# APPLICATION STATUSES:
+# - draft: Initial state, client can edit
+# - submitted: Client has submitted, awaiting review
+# - under_review: Admin is reviewing
+# - approved: Application approved
+# - rejected: Application rejected
+# - cancelled: Client cancelled the application
+
+# SECTION FIELD TYPES:
+# - text: Single line text input
+# - textarea: Multi-line text input
+# - number: Numeric input
+# - email: Email input with validation
+# - date: Date picker
+# - select: Dropdown selection
+# - checkbox: Multiple selection (array)
+# - radio: Single selection
+# - file: File upload
+
+# FILE UPLOAD LIMITS:
+# - Max file size: 10MB
+# - Allowed types: pdf, doc, docx, xls, xlsx, jpg, jpeg, png
+
+# TESTING WORKFLOW:
+# 1. Login as client: POST /api/client/auth/login
+# 2. Get application types: GET /api/client/multi-applications/types
+# 3. Get type structure: GET /api/client/multi-applications/types/1/structure
+# 4. Create draft: POST /api/client/multi-applications
+# 5. Fill sections: PUT /api/client/multi-applications/:id/sections/:sectionId
+# 6. Validate sections: POST /api/client/multi-applications/:id/sections/:sectionId/validate
+# 7. Upload documents: POST /api/client/multi-applications/:id/documents
+# 8. Submit: POST /api/client/multi-applications/:id/submit
+# 9. Admin reviews: POST /api/applications/:id/review-multi
