@@ -15,7 +15,8 @@
       "Bash(xargs cat:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\ADMIN\\\\OneDrive\\\\Documents\\\\personal\\\\projects\\\\nifca-project\\\\nifca-backend2\\\\src\\\\assets\\\\applications\"\" 2>/dev/null || echo \"Directory not found \")"
     ],
     "deny": [],
     "ask": []

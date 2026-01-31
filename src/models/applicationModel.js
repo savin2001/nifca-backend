@@ -139,13 +139,13 @@ const applicationModel = {
       params.push(dateTo);
     }
 
-    // Get count
+    // Get count - use [\s\S]*? to match across newlines
     const countQuery = query.replace(
-      /SELECT a\.\*, at\.name as application_type_name.*?FROM/,
+      /SELECT a\.\*, at\.name as application_type_name[\s\S]*?FROM/,
       "SELECT COUNT(*) as count FROM"
     );
     const [countResult] = await db.query(countQuery, params);
-    const total = countResult[0].count;
+    const total = countResult[0]?.count || 0;
 
     // Add ordering and pagination
     query += " ORDER BY a.updated_at DESC LIMIT ? OFFSET ?";
