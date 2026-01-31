@@ -93,11 +93,12 @@ app.use(bodyParser.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/client", clientRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/applications", applicationRoutes); // New
-app.use("/api/client/applications", clientApplicationRoutes); // New
+// Client routes - order matters! More specific routes first
 app.use("/api/client/multi-applications", multiSectionApplicationRoutes); // Multi-section applications
+app.use("/api/client/applications", clientApplicationRoutes); // Client applications
+app.use("/api/client", clientRoutes); // General client routes (must be last)
 app.use("/api/linkedin", linkedinOAuthRoutes); // LinkedIn OAuth
 
 module.exports = app;

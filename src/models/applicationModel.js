@@ -110,10 +110,10 @@ const applicationModel = {
   async getAllWithFilters({ status, applicationTypeId, clientId, dateFrom, dateTo, page = 1, limit = 20 }) {
     let query = `
       SELECT a.*, at.name as application_type_name, at.code as application_type_code,
-             u.username as client_username, u.email as client_email
+             c.username as client_username, c.email as client_email
       FROM applications a
       LEFT JOIN application_types at ON a.application_type_id = at.id
-      LEFT JOIN users u ON a.client_id = u.id
+      LEFT JOIN clients c ON a.client_id = c.id
       WHERE 1=1
     `;
     const params = [];
@@ -224,10 +224,10 @@ const applicationModel = {
    */
   async getPendingReview(limit = 10) {
     const [rows] = await db.query(
-      `SELECT a.*, at.name as application_type_name, u.username as client_username
+      `SELECT a.*, at.name as application_type_name, c.username as client_username
        FROM applications a
        LEFT JOIN application_types at ON a.application_type_id = at.id
-       LEFT JOIN users u ON a.client_id = u.id
+       LEFT JOIN clients c ON a.client_id = c.id
        WHERE a.status IN ('submitted', 'under_review')
        ORDER BY a.submitted_at ASC
        LIMIT ?`,
