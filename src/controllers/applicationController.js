@@ -1,7 +1,15 @@
 // src/controllers/applicationController.js
 const userModel = require("../models/userModel");
 const applicationModel = require("../models/applicationModel");
+const applicationTypeModel = require("../models/applicationTypeModel");
+const applicationSectionDataModel = require("../models/applicationSectionDataModel");
+const applicationDocumentModel = require("../models/applicationDocumentModel");
+const clientModel = require("../models/clientModel");
+const pdfGeneratorService = require("../services/pdfGeneratorService");
 const { validationResult } = require("express-validator");
+const path = require("path");
+const fs = require("fs");
+const db = require("../config/db");
 
 const applicationController = {
   async disableClient(req, res) {
@@ -309,6 +317,312 @@ const applicationController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: error.message || "Server error while deleting client" });
+    }
+  },
+
+  // =====================================================
+  // Multi-Section Application Admin Operations
+  // =====================================================
+
+  /**
+   * Get all applications with filtering and pagination
+   */
+  async getAllApplicationsFiltered(req, res) {
+    const userId = req.user.userId;
+    const { status, application_type_id, client_id, date_from, date_to, page, limit } = req.query;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const result = await applicationModel.getAllWithFilters({
+        status,
+        applicationTypeId: application_type_id,
+        clientId: client_id,
+        dateFrom: date_from,
+        dateTo: date_to,
+        page: page || 1,
+        limit: limit || 20,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching applications" });
+    }
+  },
+
+  /**
+   * Get full application details including sections and documents
+   */
+  async getApplicationFullDetails(req, res) {
+    const userId = req.user.userId;
+    const applicationId = parseInt(req.params.id);
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const application = await applicationModel.findByIdWithType(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get client info
+      const client = await userModel.findById(application.client_id);
+
+      // Get application type structure
+      let typeStructure = null;
+      if (application.application_type_id) {
+        typeStructure = await applicationTypeModel.getTypeWithStructure(application.application_type_id);
+      }
+
+      // Get all section data
+      const sectionData = await applicationSectionDataModel.getAllSectionData(applicationId);
+
+      // Get all documents
+      const documents = await applicationDocumentModel.getByApplicationId(applicationId);
+
+      // Get completion status
+      let completionStatus = null;
+      if (application.application_type_id) {
+        completionStatus = await applicationSectionDataModel.getCompletionStatus(
+          applicationId,
+          application.application_type_id
+        );
+      }
+
+      res.status(200).json({
+        application,
+        client: client ? { id: client.id, username: client.username, email: client.email } : null,
+        applicationType: typeStructure,
+        sectionData,
+        documents,
+        completionStatus,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching application details" });
+    }
+  },
+
+  /**
+   * Update application status (for workflow management)
+   */
+  async updateApplicationStatus(req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.user.userId;
+    const applicationId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const application = await applicationModel.findById(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const updatedApplication = await applicationModel.updateStatus(applicationId, status, userId);
+      res.status(200).json({
+        message: "Application status updated successfully",
+        application: updatedApplication,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message || "Server error while updating application status" });
+    }
+  },
+
+  /**
+   * Review multi-section application (enhanced review)
+   */
+  async reviewMultiSectionApplication(req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.user.userId;
+    const applicationId = parseInt(req.params.id);
+    const { status, review_comments } = req.body;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const application = await applicationModel.findById(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Only submitted or under_review applications can be reviewed
+      if (!["submitted", "under_review", "pending"].includes(application.status)) {
+        return res.status(400).json({ error: "This application cannot be reviewed in its current state" });
+      }
+
+      const updatedApplication = await applicationModel.reviewApplication(
+        applicationId,
+        { status, reviewComments: review_comments },
+        userId
+      );
+
+      // Regenerate PDF with updated status for approved/rejected applications
+      let pdfPath = application.pdf_path;
+      if (["approved", "rejected"].includes(status)) {
+        try {
+          // Get application data for PDF generation
+          const typeStructure = await applicationTypeModel.getTypeWithStructure(application.application_type_id);
+          const sectionData = await applicationSectionDataModel.getAllSectionData(applicationId);
+          const documents = await applicationDocumentModel.getByApplicationId(applicationId);
+          const client = await clientModel.findById(application.client_id);
+
+          // Delete old PDF if exists
+          if (application.pdf_path) {
+            pdfGeneratorService.deletePdf(application.pdf_path);
+          }
+
+          // Generate new PDF with updated status
+          pdfPath = await pdfGeneratorService.generateApplicationPdf(
+            {
+              ...updatedApplication,
+              applicationType: typeStructure,
+              sections: typeStructure.sections,
+              client: client,
+            },
+            sectionData,
+            documents
+          );
+
+          // Update PDF path in database
+          await db.query(
+            "UPDATE applications SET pdf_path = ?, pdf_generated_at = NOW() WHERE id = ?",
+            [pdfPath, applicationId]
+          );
+        } catch (pdfError) {
+          console.error("Error regenerating PDF:", pdfError);
+          // Continue even if PDF generation fails
+        }
+      }
+
+      res.status(200).json({
+        message: "Application reviewed successfully",
+        application: { ...updatedApplication, pdf_path: pdfPath },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message || "Server error while reviewing application" });
+    }
+  },
+
+  /**
+   * Download application PDF (admin access)
+   */
+  async downloadApplicationPdf(req, res) {
+    const userId = req.user.userId;
+    const applicationId = parseInt(req.params.id);
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const application = await applicationModel.findById(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      if (!application.pdf_path) {
+        return res.status(404).json({ error: "PDF not available for this application" });
+      }
+
+      const fullPath = path.join(__dirname, "..", application.pdf_path);
+      if (!fs.existsSync(fullPath)) {
+        return res.status(404).json({ error: "PDF file not found" });
+      }
+
+      const filename = `NIFCA_Application_${application.reference_number || application.id}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.sendFile(fullPath);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while downloading PDF" });
+    }
+  },
+
+  /**
+   * Get application statistics for dashboard
+   */
+  async getApplicationStatistics(req, res) {
+    const userId = req.user.userId;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const statistics = await applicationModel.getStatistics();
+      res.status(200).json(statistics);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching statistics" });
+    }
+  },
+
+  /**
+   * Get applications pending review
+   */
+  async getPendingReviewApplications(req, res) {
+    const userId = req.user.userId;
+    const { limit } = req.query;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const applications = await applicationModel.getPendingReview(parseInt(limit) || 10);
+      res.status(200).json(applications);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching pending applications" });
+    }
+  },
+
+  /**
+   * Get all application types (for admin filtering)
+   */
+  async getApplicationTypes(req, res) {
+    const userId = req.user.userId;
+
+    try {
+      const user = await userModel.findById(userId);
+      if (user.role_id !== 3) {
+        return res.status(403).json({ error: "Only Application Admins can access this endpoint." });
+      }
+
+      const types = await applicationTypeModel.getAllTypes(false); // Include inactive types for admin
+      res.status(200).json(types);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error while fetching application types" });
     }
   },
 };
