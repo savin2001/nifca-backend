@@ -3,16 +3,26 @@ const db = require("../config/db");
 
 const applicationModel = {
   async create({ clientId, title, description }) {
+    // Generate reference number: APP-YYYY-XXXXX
+    const year = new Date().getFullYear();
+
     const [result] = await db.query(
       "INSERT INTO applications (client_id, title, description) VALUES (?, ?, ?)",
       [clientId, title, description]
     );
     const applicationId = result.insertId;
 
+    // Update with reference number after getting ID
+    const referenceNumber = `APP-${year}-${String(applicationId).padStart(5, '0')}`;
+    await db.query(
+      "UPDATE applications SET reference_number = ? WHERE id = ?",
+      [referenceNumber, applicationId]
+    );
+
     // Log the creation action
     await db.query(
       "INSERT INTO application_audit_log (application_id, action, performed_by, new_data) VALUES (?, 'create', ?, ?)",
-      [applicationId, clientId, JSON.stringify({ title, description, status: 'pending' })]
+      [applicationId, clientId, JSON.stringify({ title, description, status: 'pending', reference_number: referenceNumber })]
     );
 
     return applicationId;
@@ -20,7 +30,10 @@ const applicationModel = {
 
   async findById(id) {
     const [rows] = await db.query(
-      "SELECT * FROM applications WHERE id = ?",
+      `SELECT id, client_id, application_type_id, reference_number, title, description, status,
+              reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
+              current_section, completion_percentage, created_at, updated_at, cancelled_at
+       FROM applications WHERE id = ?`,
       [id]
     );
     return rows[0];
@@ -28,14 +41,20 @@ const applicationModel = {
 
   async getAll() {
     const [rows] = await db.query(
-      "SELECT id, client_id, title, description, status, reviewed_by, review_comments, created_at, updated_at, cancelled_at FROM applications"
+      `SELECT id, client_id, application_type_id, reference_number, title, description, status,
+              reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
+              current_section, completion_percentage, created_at, updated_at, cancelled_at
+       FROM applications`
     );
     return rows;
   },
 
   async getByClientId(clientId) {
     const [rows] = await db.query(
-      "SELECT id, client_id, title, description, status, reviewed_by, review_comments, created_at, updated_at, cancelled_at FROM applications WHERE client_id = ?",
+      `SELECT id, client_id, application_type_id, reference_number, title, description, status,
+              reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
+              current_section, completion_percentage, created_at, updated_at, cancelled_at
+       FROM applications WHERE client_id = ? ORDER BY created_at DESC`,
       [clientId]
     );
     return rows;
