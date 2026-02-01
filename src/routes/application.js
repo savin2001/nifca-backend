@@ -42,7 +42,7 @@ const validateStatusUpdate = [
 ];
 
 const validateMultiSectionReview = [
-  body("status").isIn(["under_review", "approved", "rejected"]).withMessage("Status must be 'under_review', 'approved', or 'rejected'"),
+  body("status").isIn(["pending", "under_review", "approved", "rejected"]).withMessage("Status must be 'pending', 'under_review', 'approved', or 'rejected'"),
   body("review_comments").optional().isString().isLength({ max: 2000 }).withMessage("Review comments must be less than 2000 characters"),
 ];
 

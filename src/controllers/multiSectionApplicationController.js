@@ -285,7 +285,7 @@ const multiSectionApplicationController = {
       if (application.client_id !== clientId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      if (application.status !== "draft") {
+      if (!["draft", "pending"].includes(application.status)) {
         return res.status(400).json({ error: "Cannot modify a submitted application" });
       }
 
@@ -338,7 +338,7 @@ const multiSectionApplicationController = {
       if (application.client_id !== clientId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      if (application.status !== "draft") {
+      if (!["draft", "pending"].includes(application.status)) {
         return res.status(400).json({ error: "Cannot validate a submitted application" });
       }
 
@@ -408,7 +408,7 @@ const multiSectionApplicationController = {
       if (application.client_id !== clientId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      if (application.status !== "draft") {
+      if (!["draft", "pending"].includes(application.status)) {
         return res.status(400).json({ error: "Cannot upload documents to a submitted application" });
       }
 
@@ -487,7 +487,7 @@ const multiSectionApplicationController = {
       if (application.client_id !== clientId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      if (application.status !== "draft") {
+      if (!["draft", "pending"].includes(application.status)) {
         return res.status(400).json({ error: "Cannot delete documents from a submitted application" });
       }
 
@@ -545,7 +545,7 @@ const multiSectionApplicationController = {
         await connection.rollback();
         return res.status(403).json({ error: "Access denied" });
       }
-      if (application.status !== "draft") {
+      if (!["draft", "pending"].includes(application.status)) {
         await connection.rollback();
         return res.status(400).json({ error: "Application has already been submitted" });
       }

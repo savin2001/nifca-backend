@@ -4,9 +4,12 @@ const applicationModel = require("../models/applicationModel");
 const applicationTypeModel = require("../models/applicationTypeModel");
 const applicationSectionDataModel = require("../models/applicationSectionDataModel");
 const applicationDocumentModel = require("../models/applicationDocumentModel");
+const clientModel = require("../models/clientModel");
+const pdfGeneratorService = require("../services/pdfGeneratorService");
 const { validationResult } = require("express-validator");
 const path = require("path");
 const fs = require("fs");
+const db = require("../config/db");
 
 const applicationController = {
   async disableClient(req, res) {
@@ -477,9 +480,47 @@ const applicationController = {
         userId
       );
 
+      // Regenerate PDF with updated status for approved/rejected applications
+      let pdfPath = application.pdf_path;
+      if (["approved", "rejected"].includes(status)) {
+        try {
+          // Get application data for PDF generation
+          const typeStructure = await applicationTypeModel.getTypeWithStructure(application.application_type_id);
+          const sectionData = await applicationSectionDataModel.getAllSectionData(applicationId);
+          const documents = await applicationDocumentModel.getByApplicationId(applicationId);
+          const client = await clientModel.findById(application.client_id);
+
+          // Delete old PDF if exists
+          if (application.pdf_path) {
+            pdfGeneratorService.deletePdf(application.pdf_path);
+          }
+
+          // Generate new PDF with updated status
+          pdfPath = await pdfGeneratorService.generateApplicationPdf(
+            {
+              ...updatedApplication,
+              applicationType: typeStructure,
+              sections: typeStructure.sections,
+              client: client,
+            },
+            sectionData,
+            documents
+          );
+
+          // Update PDF path in database
+          await db.query(
+            "UPDATE applications SET pdf_path = ?, pdf_generated_at = NOW() WHERE id = ?",
+            [pdfPath, applicationId]
+          );
+        } catch (pdfError) {
+          console.error("Error regenerating PDF:", pdfError);
+          // Continue even if PDF generation fails
+        }
+      }
+
       res.status(200).json({
         message: "Application reviewed successfully",
-        application: updatedApplication,
+        application: { ...updatedApplication, pdf_path: pdfPath },
       });
     } catch (error) {
       console.error(error);
