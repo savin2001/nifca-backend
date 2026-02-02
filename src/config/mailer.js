@@ -179,9 +179,32 @@ const sendViaSMTP = async (mailOptions) => {
 };
 
 const sendVerificationEmail = async (email, token, userType = "client", password) => {
+  // Determine URLs based on environment
+  const isProduction = process.env.NODE_ENV === "production";
+
   // Remove trailing slash from URLs to prevent double slashes
-  const baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
-  const backendUrl = (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+  let baseUrl, backendUrl;
+
+  if (isProduction) {
+    // In production, these MUST be set in environment variables
+    baseUrl = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
+    backendUrl = (process.env.BACKEND_URL || "").replace(/\/+$/, "");
+
+    if (!baseUrl) {
+      console.error("WARNING: FRONTEND_URL not set in production!");
+    }
+    if (!backendUrl) {
+      console.error("WARNING: BACKEND_URL not set in production!");
+    }
+  } else {
+    // Local development defaults
+    baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+    backendUrl = (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+  }
+
+  console.log(`[EMAIL] Environment: ${isProduction ? "production" : "development"}`);
+  console.log(`[EMAIL] Frontend URL: ${baseUrl}`);
+  console.log(`[EMAIL] Backend URL: ${backendUrl}`);
 
   // For admin users, use backend API directly. For clients, use frontend page.
   const verificationLink = userType === "admin"
@@ -272,9 +295,22 @@ const sendVerificationEmail = async (email, token, userType = "client", password
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-  // Remove trailing slash from URL to prevent double slashes
-  const baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+  // Determine URL based on environment
+  const isProduction = process.env.NODE_ENV === "production";
+
+  let baseUrl;
+  if (isProduction) {
+    baseUrl = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
+    if (!baseUrl) {
+      console.error("WARNING: FRONTEND_URL not set in production!");
+    }
+  } else {
+    baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+  }
+
   const resetUrl = `${baseUrl}/client/reset-password?token=${token}`;
+  console.log(`[EMAIL] Environment: ${isProduction ? "production" : "development"}`);
+  console.log(`[EMAIL] Frontend URL: ${baseUrl}`);
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #FFFFFF; border-radius: 10px; border: 1px solid #ddd;">
