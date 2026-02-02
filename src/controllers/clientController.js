@@ -2,7 +2,7 @@
 const clientModel = require("../models/clientModel");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
-const { sendVerificationEmail } = require("../config/mailer");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/mailer");
 
 const clientController = {
   async register(req, res) {

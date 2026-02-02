@@ -21,10 +21,28 @@ transporter.verify((error, success) => {
 });
 
 const sendVerificationEmail = async (email, token, userType = "client", password) => {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const verificationPath = userType === "admin" ? "/api/auth/verify" : "/api/client/auth/verify";
-  const verificationLink = `${baseUrl}${verificationPath}?token=${token}`;
+  // Remove trailing slash from URLs to prevent double slashes
+  const baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const backendUrl = (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+
+  // For admin users, use backend API directly. For clients, use frontend page.
+  const verificationLink = userType === "admin"
+    ? `${backendUrl}/api/auth/verify?token=${token}`
+    : `${baseUrl}/client/verify-email?token=${token}`;
+
   const logoPath = path.join(__dirname, "../assets/nifca.png");
+
+  // Only show password section for admin users who have a temporary password
+  const passwordSection = password
+    ? `<p style="color: #205473; font-size: 16px; text-align: center;">
+          Your temporary password: <strong>${password}</strong>
+        </p>
+        <p style="color: #205473; font-size: 14px; text-align: center;">
+          Please change your password after logging in.
+        </p>`
+    : `<p style="color: #205473; font-size: 16px; text-align: center;">
+          After verification, you will need to activate your account using the password you chose during registration.
+        </p>`;
 
   const mailOptions = {
     from: `"NIFCA Support" <${process.env.EMAIL_USER}>`,
@@ -40,17 +58,12 @@ const sendVerificationEmail = async (email, token, userType = "client", password
           We're excited to have you on board. Before you get started, please verify your email address by clicking the button below:
         </p>
         <div style="text-align: center; margin: 20px 0;">
-          <a href="${verificationLink}" 
+          <a href="${verificationLink}"
             style="background-color: #A62D5C; color: #FFFFFF; padding: 12px 18px; text-decoration: none; font-size: 16px; border-radius: 5px; display: inline-block;">
             Verify Email
           </a>
         </div>
-        <p style="color: #205473; font-size: 16px; text-align: center;">
-          After verification, you can log in using your email ${email}
-        </p>
-        <p style="color: #205473; font-size: 16px; text-align: center;">
-          First time password: ${password}
-        </p>
+        ${passwordSection}
         <p style="color: #205473; font-size: 14px; text-align: center;">
           If you did not sign up for a NIFCA account, please ignore this email.
         </p>
@@ -78,7 +91,9 @@ const sendVerificationEmail = async (email, token, userType = "client", password
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  // Remove trailing slash from URL to prevent double slashes
+  const baseUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const resetUrl = `${baseUrl}/client/reset-password?token=${token}`;
   const mailOptions = {
     from: `"NIFCA Support" <${process.env.EMAIL_USER}>`,
     to: email,
