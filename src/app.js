@@ -19,6 +19,10 @@ const path = require('path');
 
 const app = express();
 
+// Trust proxy - required for secure cookies behind reverse proxy (Render, Heroku, etc.)
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
 // Secure CORS configuration - allow multiple origins
 const allowedOrigins = [
@@ -67,6 +71,8 @@ const sessionStore = new MySQLStore({
 }, db);
 
 // Apply session middleware only to client routes
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/client')) {
     session({
@@ -75,10 +81,12 @@ app.use((req, res, next) => {
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
+      proxy: isProduction, // Trust the reverse proxy in production (Render, etc.)
       cookie: {
         maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isProduction, // HTTPS only in production
+        sameSite: isProduction ? "none" : "lax", // 'none' for cross-domain in production
       },
     })(req, res, next);
   } else {
