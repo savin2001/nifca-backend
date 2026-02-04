@@ -206,6 +206,16 @@ const sendVerificationEmail = async (email, token, userType = "client", password
   console.log(`[EMAIL] Frontend URL: ${baseUrl}`);
   console.log(`[EMAIL] Backend URL: ${backendUrl}`);
 
+  // Validate URLs are set in production
+  if (isProduction) {
+    if (!baseUrl) {
+      throw new Error("FRONTEND_URL environment variable is required in production");
+    }
+    if (!backendUrl && userType === "admin") {
+      throw new Error("BACKEND_URL environment variable is required in production for admin emails");
+    }
+  }
+
   // For admin users, use backend API directly. For clients, use frontend page.
   const verificationLink = userType === "admin"
     ? `${backendUrl}/api/auth/verify?token=${token}`
