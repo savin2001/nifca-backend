@@ -1,8 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `nifca` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `nifca`;
+CREATE DATABASE  IF NOT EXISTS `nifca_backend` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `nifca_backend`;
 -- MySQL dump 10.13  Distrib 8.0.41, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: nifca
+-- Host: 127.0.0.1    Database: nifca_backend
 -- ------------------------------------------------------
 -- Server version	8.0.41
 
