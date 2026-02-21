@@ -28,7 +28,7 @@ router.patch("/:id/review", authMiddleware, validateApplicationId, validateRevie
 
 // Validation for new routes
 const validateFilters = [
-  query("status").optional().isIn(["draft", "submitted", "under_review", "approved", "rejected", "cancelled", "pending"]).withMessage("Invalid status"),
+  query("status").optional().isIn(["draft", "submitted", "under_review", "in_pipeline", "approved", "rejected", "cancelled", "pending"]).withMessage("Invalid status"),
   query("application_type_id").optional().isInt({ min: 1 }).withMessage("Application type ID must be a positive integer"),
   query("client_id").optional().isInt({ min: 1 }).withMessage("Client ID must be a positive integer"),
   query("date_from").optional().isISO8601().withMessage("date_from must be a valid date"),
@@ -38,7 +38,7 @@ const validateFilters = [
 ];
 
 const validateStatusUpdate = [
-  body("status").isIn(["draft", "submitted", "under_review", "approved", "rejected", "cancelled", "pending"]).withMessage("Invalid status"),
+  body("status").isIn(["draft", "submitted", "under_review", "in_pipeline", "approved", "rejected", "cancelled", "pending"]).withMessage("Invalid status"),
 ];
 
 const validateMultiSectionReview = [

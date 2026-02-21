@@ -574,6 +574,9 @@ const multiSectionApplicationController = {
       const pdfPath = await pdfGeneratorService.generateApplicationPdf(
         {
           ...application,
+          status: "submitted",
+          submitted_at: new Date(),
+          completion_percentage: 100,
           applicationType: typeStructure,
           sections: typeStructure.sections,
           client: await clientModel.findById(clientId),

@@ -15,6 +15,8 @@ const applicationRoutes = require("./routes/application"); // New
 const clientApplicationRoutes = require("./routes/clientApplication"); // New
 const multiSectionApplicationRoutes = require("./routes/multiSectionApplication"); // Multi-section applications
 const linkedinOAuthRoutes = require("./routes/linkedinOAuth"); // LinkedIn OAuth
+const pipelineRoutes = require("./routes/pipeline"); // Approval pipeline
+const { clientRouter: clientPipelineRoutes } = require("./routes/pipeline"); // Client pipeline routes
 const path = require('path');
 
 const app = express();
@@ -103,7 +105,9 @@ app.use("/api/client/auth", clientAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/applications", applicationRoutes); // New
+app.use("/api/pipeline", pipelineRoutes); // Approval pipeline
 // Client routes - order matters! More specific routes first
+app.use("/api/client", clientPipelineRoutes); // Client pipeline status
 app.use("/api/client/multi-applications", multiSectionApplicationRoutes); // Multi-section applications
 app.use("/api/client/applications", clientApplicationRoutes); // Client applications
 app.use("/api/client", clientRoutes); // General client routes (must be last)
