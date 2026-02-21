@@ -32,7 +32,8 @@ const applicationModel = {
     const [rows] = await db.query(
       `SELECT id, client_id, application_type_id, reference_number, title, description, status,
               reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
-              current_section, completion_percentage, created_at, updated_at, cancelled_at
+              current_section, completion_percentage, pipeline_current_stage_id,
+              pipeline_started_at, pipeline_completed_at, created_at, updated_at, cancelled_at
        FROM applications WHERE id = ?`,
       [id]
     );
@@ -43,7 +44,8 @@ const applicationModel = {
     const [rows] = await db.query(
       `SELECT id, client_id, application_type_id, reference_number, title, description, status,
               reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
-              current_section, completion_percentage, created_at, updated_at, cancelled_at
+              current_section, completion_percentage, pipeline_current_stage_id,
+              pipeline_started_at, pipeline_completed_at, created_at, updated_at, cancelled_at
        FROM applications`
     );
     return rows;
@@ -53,7 +55,8 @@ const applicationModel = {
     const [rows] = await db.query(
       `SELECT id, client_id, application_type_id, reference_number, title, description, status,
               reviewed_by, review_comments, submitted_at, pdf_path, pdf_generated_at,
-              current_section, completion_percentage, created_at, updated_at, cancelled_at
+              current_section, completion_percentage, pipeline_current_stage_id,
+              pipeline_started_at, pipeline_completed_at, created_at, updated_at, cancelled_at
        FROM applications WHERE client_id = ? ORDER BY created_at DESC`,
       [clientId]
     );
@@ -247,7 +250,7 @@ const applicationModel = {
        FROM applications a
        LEFT JOIN application_types at ON a.application_type_id = at.id
        LEFT JOIN clients c ON a.client_id = c.id
-       WHERE a.status IN ('submitted', 'under_review')
+       WHERE a.status IN ('submitted', 'under_review', 'in_pipeline')
        ORDER BY a.submitted_at ASC
        LIMIT ?`,
       [limit]
